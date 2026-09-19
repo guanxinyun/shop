@@ -604,17 +604,31 @@
           <div class="panel-header">
             <h2>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-              商会每日集运出货箱 (后门)
+              商会每日集运出货箱 (每日 17:00 马车统购)
             </h2>
-            <span style="font-size:0.75rem;color:var(--border-gold-glow);">每日 17:00 马车清算</span>
+            <span style="font-size:0.75rem;color:var(--border-gold-glow);">主动放入才卖出</span>
           </div>
           <div class="panel-body">
-            <p style="font-size:0.8rem;color:var(--text-dim);">
-              将多余药剂与翻新货随手扔进木箱，商会全额保底按基准市价 100% 收购，现金流永不卡死：
-            </p>
-            <div class="bin-crate-slot-grid" id="shipping-crate-slots-grid"></div>
+            <div style="background:#1b130e;border:1px solid rgba(198,156,88,0.25);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:0.76rem;color:#dfd2c0;">
+              💡 <strong>掌柜法则：</strong>成药与原料默认留在背包中永久囤存（保留 Lv.4+ 绝造词缀备战大订单）！仅有您<strong>主动移入出货箱</strong>的物品，才会在打烊时由马车结算变现。
+            </div>
+
+            <!-- 出货箱待卖区 -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <strong style="font-size:0.82rem;color:#ffd875;">📦 待售集运箱 (点击取回背包)：</strong>
+              <span id="shipping-bin-count" style="font-size:0.72rem;color:var(--text-dim);">箱内：0 件</span>
+            </div>
+            <div class="bin-crate-slot-grid" id="shipping-crate-slots-grid" style="min-height:110px;"></div>
+
+            <!-- 背包仓库囤货区 -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 6px 0;border-top:1px dashed rgba(198,156,88,0.25);padding-top:10px;">
+              <strong style="font-size:0.82rem;color:#9ae6b4;">🎒 背包仓库库存 (点击放入出货箱)：</strong>
+              <span id="inventory-warehouse-count" style="font-size:0.72rem;color:var(--text-dim);">存货：0 件</span>
+            </div>
+            <div class="bin-crate-slot-grid" id="inventory-warehouse-slots-grid" style="min-height:110px;"></div>
+
             <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid rgba(198,156,88,0.2);">
-              <span style="font-size:0.85rem;">箱内预估结算款：</span>
+              <span style="font-size:0.85rem;">待售集运箱结算款：</span>
               <span id="shipping-estimated-total" style="font-family:var(--font-sans);font-weight:700;color:#ffd875;font-size:1.1rem;">
                 0 银币
               </span>

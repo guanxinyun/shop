@@ -20,6 +20,7 @@
       { id: 'inv_2', name: '轻伤药水 (标准)', type: 'potion', price: 8, tags: ['促愈活性'], clarity: 62 },
       { id: 'inv_3', name: '打磨光亮的古银扣', type: 'relic', price: 55, tags: ['古代避风微刻纹'], clarity: 90 }
     ],
+    shippingBin: [], // 专属商会出货箱待售队列，与背包彻底物理分离！
     showcaseItem: null
   };
 
@@ -684,6 +685,16 @@
         <span style="color:#ffd875;font-size:0.7rem;">(投入)</span>
       `;
       chip.addEventListener('click', () => {
+        // 记录原料携带的高阶标签（Lv4+ 绝造词缀）
+        const highTierTags = (mat.tags || []).filter(t => {
+          return t.includes('古代') || t.includes('雷') || t.includes('极寒') || t.includes('自锁') || t.includes('神髓') || t.includes('绝');
+        });
+        if (highTierTags.length > 0) {
+          state.cauldronInheritedTags = state.cauldronInheritedTags || [];
+          state.cauldronInheritedTags.push(...highTierTags);
+          showToast('绝造特性融入', `原料的 Lv.4+ 珍奇特性【${highTierTags.join('、')}】已融入药汤底质！`, 'perfect-combo');
+        }
+
         // 从背包中消耗该材料
         state.inventoryItems.splice(idx, 1);
         AudioEngine.playOrb();
@@ -913,13 +924,16 @@
         showToast('手札神髓补全！', `你在配方空白处用炭铅笔写下连招，永久解锁【${matchedBranch.name}】！`, 'perfect-combo');
       }
 
+      const inherited = state.cauldronInheritedTags || [];
+      state.cauldronInheritedTags = []; // 消费清空
+
       const potionName = `${recipe.name} (${matchedBranch.name})`;
       state.inventoryItems.push({
         id: `potion_${Date.now()}`,
         name: potionName,
         type: 'potion',
-        price: 24,
-        tags: [...matchedBranch.bonusTags],
+        price: 24 + (inherited.length * 15),
+        tags: [...new Set([...matchedBranch.bonusTags, ...inherited])],
         clarity: state.alchemyClarity
       });
 
@@ -1025,28 +1039,86 @@
   }
 
   function renderShippingBinView() {
-    const grid = document.getElementById('shipping-crate-slots-grid');
+    const shippingGrid = document.getElementById('shipping-crate-slots-grid');
+    const warehouseGrid = document.getElementById('inventory-warehouse-slots-grid');
     const totalEl = document.getElementById('shipping-estimated-total');
-    if (!grid) return;
-    grid.innerHTML = '';
+    const shippingCountEl = document.getElementById('shipping-bin-count');
+    const warehouseCountEl = document.getElementById('inventory-warehouse-count');
 
-    let totalEst = 0;
-    state.inventoryItems.forEach(item => {
-      totalEst += item.price;
-      const slot = document.createElement('div');
-      slot.className = 'crate-slot occupied';
-      slot.innerHTML = `
-        <strong style="font-size:0.76rem;color:#ffd875;text-align:center;">${item.name}</strong>
-        <span style="font-size:0.68rem;color:#a89785;margin-top:3px;">${item.price} 银币</span>
-      `;
-      slot.addEventListener('click', () => {
-        AudioEngine.playTap();
-        showToast('货柜操作', `【${item.name}】已放入每日集运箱，傍晚 17:00 马车统购。`, 'normal');
-      });
-      grid.appendChild(slot);
-    });
+    state.shippingBin = state.shippingBin || [];
 
-    if (totalEl) totalEl.textContent = `${totalEst} 银币`;
+    // 1. 渲染出货箱待售区 (点击取回背包)
+    if (shippingGrid) {
+      shippingGrid.innerHTML = '';
+      let totalEst = 0;
+
+      if (state.shippingBin.length === 0) {
+        shippingGrid.innerHTML = `
+          <div style="grid-column: 1 / -1; font-size:0.75rem; color:var(--text-dim); text-align:center; padding:18px;">
+            出货箱当前为空。成药与材料默认囤在下方背包仓库中，点击下方物品即可放入出货箱。
+          </div>
+        `;
+      } else {
+        state.shippingBin.forEach((item, idx) => {
+          totalEst += item.price;
+          const slot = document.createElement('div');
+          slot.className = 'crate-slot occupied';
+          slot.style.border = '1px solid #ffd875';
+          slot.innerHTML = `
+            <strong style="font-size:0.75rem;color:#ffd875;text-align:center;">${item.name}</strong>
+            <span style="font-size:0.68rem;color:#a89785;margin-top:2px;">${item.price} 银 (待卖)</span>
+            <span style="font-size:0.62rem;color:#9ae6b4;margin-top:2px;">点击取回</span>
+          `;
+          slot.addEventListener('click', () => {
+            // 从出货箱取回背包
+            state.shippingBin.splice(idx, 1);
+            state.inventoryItems.push(item);
+            AudioEngine.playTap();
+            showToast('已取回背包', `【${item.name}】已从出货箱撤回工坊仓库，打烊时不会被卖出！`, 'normal');
+            renderShippingBinView();
+          });
+          shippingGrid.appendChild(slot);
+        });
+      }
+
+      if (totalEl) totalEl.textContent = `${totalEst} 银币`;
+      if (shippingCountEl) shippingCountEl.textContent = `箱内：${state.shippingBin.length} 件`;
+    }
+
+    // 2. 渲染背包仓库囤货区 (点击放入出货箱)
+    if (warehouseGrid) {
+      warehouseGrid.innerHTML = '';
+      if (state.inventoryItems.length === 0) {
+        warehouseGrid.innerHTML = `
+          <div style="grid-column: 1 / -1; font-size:0.75rem; color:var(--text-dim); text-align:center; padding:18px;">
+            背包仓库空空如也。可在柜台收货、订购原料或在后院熬制成药！
+          </div>
+        `;
+      } else {
+        state.inventoryItems.forEach((item, idx) => {
+          const hasRareTag = (item.tags || []).some(t => t.includes('古代') || t.includes('雷') || t.includes('极寒') || t.includes('自锁') || t.includes('神髓') || t.includes('绝') || t.includes('清甜') || t.includes('促愈'));
+          const slot = document.createElement('div');
+          slot.className = 'crate-slot occupied';
+          if (hasRareTag) slot.style.border = '1px solid #ffd700';
+          slot.innerHTML = `
+            <strong style="font-size:0.75rem;color:${hasRareTag ? '#ffd700' : '#f0e6d6'};text-align:center;">${item.name}</strong>
+            <span style="font-size:0.66rem;color:#c0ab92;margin-top:2px;">${item.price} 银</span>
+            ${hasRareTag ? '<span style="font-size:0.62rem;color:#ffd700;">★ Lv.4+ 珍奇</span>' : ''}
+            <span style="font-size:0.62rem;color:#ffd875;margin-top:2px;">点击入箱出售</span>
+          `;
+          slot.addEventListener('click', () => {
+            // 从背包移入出货箱
+            state.inventoryItems.splice(idx, 1);
+            state.shippingBin.push(item);
+            AudioEngine.playCoin();
+            showToast('放入出货箱', `【${item.name}】已放入商会集运箱，将在今日打烊时由马车结算！`, 'normal');
+            renderShippingBinView();
+          });
+          warehouseGrid.appendChild(slot);
+        });
+      }
+      if (warehouseCountEl) warehouseCountEl.textContent = `存货：${state.inventoryItems.length} 件 (永久囤存)`;
+    }
   }
 
   function renderMarketNewsletter() {
@@ -1466,18 +1538,20 @@
     const debtCountEl = document.getElementById('settle-debt-countdown-text');
     const confirmBtn = document.getElementById('btn-confirm-next-day');
 
-    // 计算商会集运箱结算款
+    state.shippingBin = state.shippingBin || [];
+
+    // 计算商会集运箱结算款 (只卖主动移入出货箱的物品，背包成药永久囤留！)
     let shippingSum = 0;
-    state.inventoryItems.forEach(i => { shippingSum += i.price; });
+    state.shippingBin.forEach(i => { shippingSum += i.price; });
 
     if (titleEl) titleEl.textContent = `第 ${state.day} 日 · ${state.season} 营业盘点`;
-    if (shippingEl) shippingEl.textContent = `+ ${shippingSum} 银币`;
+    if (shippingEl) shippingEl.textContent = `+ ${shippingSum} 银币 (${state.shippingBin.length} 件待售)`;
     if (debtCountEl) {
       debtCountEl.textContent = `距离维斯佩拉执事登门清算还剩 ${state.debt.daysRemaining} 天 (当期需偿还 ${state.debt.currentDueSilver} 银币)`;
     }
 
     const netProfitEl = document.getElementById('settle-net-profit');
-    if (netProfitEl) netProfitEl.textContent = `+ ${shippingSum} 银币`;
+    if (netProfitEl) netProfitEl.textContent = `+ ${shippingSum} 银币 (背包另囤有 ${state.inventoryItems.length} 件珍藏)`;
 
     openModal('modal-nightly-settlement');
 
@@ -1491,7 +1565,7 @@
   function progressToNextDay(shippingSum) {
     // 结款入账
     state.coins.silver += shippingSum;
-    state.inventoryItems = []; // 出货箱已由马车清空
+    state.shippingBin = []; // 仅清空出货箱，背包仓库(inventoryItems)里的成药与高阶素材永久保留！
 
     // 天数推进
     state.day++;
