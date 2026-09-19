@@ -27,6 +27,26 @@ window.ATELIER_DATA = {
     inventory: []
   },
 
+  // 物品等级 (Tier 1 ~ 6) 官方指导价格基准表 (银币)
+  tierPriceGuide: {
+    material: {
+      1: { min: 2, max: 5, label: 'T1 见习寻常' },
+      2: { min: 6, max: 12, label: 'T2 熟工通货' },
+      3: { min: 14, max: 25, label: 'T3 行家里手' },
+      4: { min: 30, max: 55, label: 'T4 名匠珍品' },
+      5: { min: 65, max: 120, label: 'T5 宗匠孤品' },
+      6: { min: 150, max: 280, label: 'T6 天工绝造' }
+    },
+    potion: {
+      1: { min: 6, max: 12, label: 'T1 见习成药' },
+      2: { min: 14, max: 25, label: 'T2 熟工成药' },
+      3: { min: 28, max: 50, label: 'T3 行家成药' },
+      4: { min: 60, max: 110, label: 'T4 名匠成药' },
+      5: { min: 130, max: 240, label: 'T5 宗匠名药' },
+      6: { min: 300, max: 600, label: 'T6 奇迹神药' }
+    }
+  },
+
   // 跑马灯滚动快讯库
   marqueeBroadcasts: [
     '【小镇商会快报】近郊雨林瘴气渐起，全镇草药收购行市预计下周大幅攀升！',

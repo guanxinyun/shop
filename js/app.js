@@ -360,7 +360,9 @@
     const tagsContainer = document.getElementById('item-tags-flow');
 
     if (titleEl) titleEl.textContent = item.name;
-    if (catEl) catEl.textContent = item.category;
+    if (catEl) {
+      catEl.textContent = item.tierLabel ? `${item.tierLabel} · ${item.category}` : item.category;
+    }
     if (priceEl) priceEl.textContent = `${item.declaredPriceSilver} 银币`;
     if (descEl) descEl.textContent = item.symptomText;
 
@@ -576,11 +578,12 @@
     ];
 
     const itemBases = [
-      { name: '附带温热的伴生矿石', cat: '矿石与贵金', basePrice: 20, methods: ['acoustic_tap', 'gentle_heat'] },
-      { name: '风干多年的异兽韧角', cat: '兽骨与毛羽', basePrice: 18, methods: ['torsion_flex', 'lamp_inspect'] },
-      { name: '褪色的古代学徒抄本', cat: '纸帛与古卷', basePrice: 24, methods: ['lamp_inspect', 'fingertip_trace'] },
-      { name: '雕有飞鸟纹的黄铜怀表', cat: '器皿与用具', basePrice: 32, methods: ['lens_inspect', 'acoustic_tap'] },
-      { name: '生有淡蓝绒毛的阴生块茎', cat: '草药与生息', basePrice: 15, methods: ['drop_reagent', 'gentle_heat'] }
+      { name: '附带温热的伴生矿石', cat: '矿石与贵金', tier: 2, itemType: 'material', methods: ['acoustic_tap', 'gentle_heat'] },
+      { name: '风干多年的异兽韧角', cat: '兽骨与毛羽', tier: 3, itemType: 'material', methods: ['torsion_flex', 'lamp_inspect'] },
+      { name: '褪色的古代学徒抄本', cat: '纸帛与古卷', tier: 3, itemType: 'relic', methods: ['lamp_inspect', 'fingertip_trace'] },
+      { name: '雕有飞鸟纹的黄铜怀表', cat: '器皿与用具', tier: 4, itemType: 'gear', methods: ['lens_inspect', 'acoustic_tap'] },
+      { name: '生有淡蓝绒毛的阴生块茎', cat: '草药与生息', tier: 1, itemType: 'material', methods: ['drop_reagent', 'gentle_heat'] },
+      { name: '深渊黑曜微晶晶簇', cat: '矿石与贵金', tier: 5, itemType: 'material', methods: ['lamp_inspect', 'mana_pulse'] }
     ];
 
     const traitsPool = [
@@ -595,6 +598,12 @@
     const chosenBase = itemBases[Math.floor(Math.random() * itemBases.length)];
     const chosenTrait = traitsPool[Math.floor(Math.random() * traitsPool.length)];
 
+    // 核心重构：AI/生成器只出等级(tier)与类型，价格全由前端脚本根据官方区间计算！
+    const tierConfig = window.ATELIER_DATA.tierPriceGuide[chosenBase.itemType === 'potion' ? 'potion' : 'material'][chosenBase.tier];
+    const scriptBasePrice = Math.floor(Math.random() * (tierConfig.max - tierConfig.min + 1)) + tierConfig.min;
+    const finalFairPrice = Math.max(1, Math.round(scriptBasePrice * (1 + chosenTrait.mod - 0.05)));
+    const declaredPrice = Math.round(finalFairPrice * (1.3 + Math.random() * 0.3));
+
     return {
       id: `dynamic_cust_${Date.now()}`,
       name: chosenArch.name,
@@ -607,13 +616,16 @@
         id: `dynamic_item_${Date.now()}`,
         name: chosenBase.name,
         category: chosenBase.cat,
-        declaredPriceSilver: Math.round(chosenBase.basePrice * 1.5),
-        basePriceSilver: chosenBase.basePrice,
+        tier: chosenBase.tier,
+        tierLabel: tierConfig.label,
+        declaredPriceSilver: declaredPrice,
+        basePriceSilver: finalFairPrice,
+        scriptBasePrice: scriptBasePrice,
         symptomText: `物件表面带有风尘沉淀的包浆，光泽微暗；在油灯逆光平视时，纹理起伏间偶见细微的断续光斑，手感略有些沉滞。`,
         hiddenTotalCount: 2,
         tags: [
           { id: 'dt_0', name: '岁月风尘留痕', level: 0, revealed: true, mod: -0.05, type: 'neutral' },
-          { id: 'dt_1', name: chosenTrait.name, level: 3, revealed: false, validMethod: chosenTrait.validMethod, mod: chosenTrait.mod, type: chosenTrait.type, hint: chosenTrait.hint }
+          { id: 'dt_1', name: chosenTrait.name, level: chosenBase.tier >= 4 ? 4 : 3, revealed: false, validMethod: chosenTrait.validMethod, mod: chosenTrait.mod, type: chosenTrait.type, hint: chosenTrait.hint }
         ],
         journalEntries: [
           {
@@ -927,12 +939,19 @@
       const inherited = state.cauldronInheritedTags || [];
       state.cauldronInheritedTags = []; // 消费清空
 
+      // 根据配方阶位(Tier)动态由脚本计算成药价格，绝不死板写死！
+      const tierIndex = recipe.tier.includes('见习') ? 1 : 2;
+      const potionTierCfg = window.ATELIER_DATA.tierPriceGuide.potion[tierIndex];
+      const scriptBase = Math.floor(Math.random() * (potionTierCfg.max - potionTierCfg.min + 1)) + potionTierCfg.min;
+      const finalPrice = scriptBase + 12 + (inherited.length * 15);
+
       const potionName = `${recipe.name} (${matchedBranch.name})`;
       state.inventoryItems.push({
         id: `potion_${Date.now()}`,
         name: potionName,
         type: 'potion',
-        price: 24 + (inherited.length * 15),
+        price: finalPrice,
+        tier: tierIndex,
         tags: [...new Set([...matchedBranch.bonusTags, ...inherited])],
         clarity: state.alchemyClarity
       });
