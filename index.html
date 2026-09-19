@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>工坊物语：杂货铺掌柜的记账本</title>
+  <link rel="stylesheet" href="css/atelier.css">
+</head>
+<body>
+
+  <!-- ==========================================================================
+       绚丽入场封面 (Cover Entrance Overlay + Canvas 魔法星盘动效)
+       ========================================================================== -->
+  <div id="cover-entrance-overlay">
+    <canvas id="magic-circle-canvas"></canvas>
+    <div class="cover-crest-container">
+      <div class="cover-astrolabe">
+        <div class="cover-ring-outer"></div>
+        <div class="cover-ring-inner"></div>
+        <div class="cover-core-gem">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+      </div>
+      <h1 class="cover-title">工坊物语</h1>
+      <div class="cover-subtitle">ATELIER OF THE OLD QUARTER</div>
+      <div class="cover-seal-btn" id="btn-unseal-cover">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        <span>触击解印 · 点亮油灯</span>
+      </div>
+      <div class="cover-tip">✦ 触碰任意区域唤醒工坊星盘，开启经营篇章 ✦</div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       顶部 HUD 状态栏 (Header Status HUD)
+       ========================================================================== -->
+  <header class="atelier-header" id="main-header">
+    <div class="header-inner">
+      <div class="brand-area" id="brand-home-trigger" style="cursor:pointer;" title="返回大厅主页概览">
+        <div class="brand-crest" id="brand-crest-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="brand-titles">
+          <h1>工坊物语 · 旧街杂货铺</h1>
+          <span class="brand-subtitle">ATELIER &amp; PAWNSHOP OF THE OLD QUARTER</span>
+        </div>
+      </div>
+
+      <div class="status-cluster">
+        <div class="status-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span>丰收之月 初三 · <strong class="highlight">午后 (14:30)</strong></span>
+        </div>
+        <div class="status-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+          </svg>
+          <span>物候：<strong class="highlight" style="color:#9ae6b4;">晴和干燥</strong></span>
+        </div>
+      </div>
+
+      <div class="money-purse" id="player-money-display" title="钱箱现金储备 (1金 = 100银 = 10000铜)">
+        <div class="coin-pill coin-gold">
+          <span class="coin-dot gold"></span>
+          <span id="hud-gold">1</span><span style="font-size:0.68rem;">金</span>
+        </div>
+        <div class="coin-pill coin-silver">
+          <span class="coin-dot silver"></span>
+          <span id="hud-silver">48</span><span style="font-size:0.68rem;">银</span>
+        </div>
+        <div class="coin-pill coin-copper">
+          <span class="coin-dot copper"></span>
+          <span id="hud-copper">65</span><span style="font-size:0.68rem;">铜</span>
+        </div>
+      </div>
+
+      <div class="debt-alert-badge" id="hud-debt-badge" title="查看行会审查通告">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="hud-debt-days">审查：剩 4 天 (需 50 银)</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       跑马灯滚动快讯条 (Marquee Broadcast Banner)
+       ========================================================================== -->
+  <div class="atelier-marquee-bar" id="marquee-broadcast-bar">
+    <div class="marquee-label">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+      </svg>
+      <span>小镇快讯</span>
+    </div>
+    <div class="marquee-track" id="marquee-track-content">
+      <!-- 由 JS 动态填充快讯文本 -->
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       主导航栏 (Main Navigation - 适配横滑滚屏)
+       ========================================================================== -->
+  <nav class="atelier-nav" id="main-atelier-nav">
+    <div class="nav-inner">
+      <button class="nav-tab-btn active" data-view="hub-view" id="nav-btn-hub">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>主页大厅</span>
+      </button>
+      <button class="nav-tab-btn" data-view="counter-view" id="nav-btn-counter">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>柜台前厅</span>
+      </button>
+      <button class="nav-tab-btn" data-view="alchemy-view" id="nav-btn-alchemy">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+        <span>后院炼金</span>
+        <span class="nav-badge" style="background:#b8860b;">3-Combo</span>
+      </button>
+      <button class="nav-tab-btn" data-view="notice-view" id="nav-btn-notice">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+        <span>小镇布告</span>
+        <span class="nav-badge">3单</span>
+      </button>
+      <button class="nav-tab-btn" data-view="shipping-view" id="nav-btn-shipping">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span>商会统购</span>
+      </button>
+      <button class="nav-tab-btn" data-view="showcase-view" id="nav-btn-showcase">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>礼宾展柜</span>
+      </button>
+      <button class="nav-tab-btn" id="nav-btn-characters-modal">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>人物手札</span>
+      </button>
+      <button class="nav-tab-btn" id="nav-btn-encyclopedia-modal">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span>24标签图鉴</span>
+      </button>
+      <button class="nav-tab-btn" data-view="audit-view" id="nav-btn-audit">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>行会审查</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ==========================================================================
+       核心主舞台容器 (Main Workspace Container)
+       ========================================================================== -->
+  <main class="atelier-container">
+
+    <!-- ========================================================================
+         视图零：综合主页大厅 (Dashboard Hub View) - 全功能微缩聚合入口
+         ======================================================================== -->
+    <section class="view-section active" id="hub-view">
+      <div style="margin-bottom:18px;">
+        <h2 style="font-family:var(--font-display);font-size:1.35rem;color:#ffd875;letter-spacing:0.06em;">
+          工坊日常总览 · 全功能中枢
+        </h2>
+        <p style="font-size:0.8rem;color:var(--text-dim);margin-top:2px;">
+          点击任意模块即刻穿梭，或在顶部导航切换深度工位
+        </p>
+      </div>
+
+      <div class="hub-grid">
+        <!-- 柜台卡片 -->
+        <div class="hub-card" data-jump="counter-view" id="hub-card-counter">
+          <div>
+            <div class="hub-card-header">
+              <span class="hub-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                柜台鉴宝前厅
+              </span>
+              <span class="hub-card-badge">客人在店</span>
+            </div>
+            <div class="hub-card-preview" style="margin-top:10px;">
+              当前来客：<strong style="color:#ffd875;">托马 (见习剑士)</strong><br>
+              携带宝物：【覆着草渍的巡林客短刃】<br>
+              回声共鸣：暗藏 2 个未知特质 (骨锤轻敲可验)
+            </div>
+          </div>
+          <div class="hub-card-footer">
+            <span>统一耐心博弈 · 落子无悔</span>
+            <span class="hub-card-enter-btn">进入接见 →</span>
+          </div>
+        </div>
+
+        <!-- 炼金工坊卡片 -->
+        <div class="hub-card" data-jump="alchemy-view" id="hub-card-alchemy">
+          <div>
+            <div class="hub-card-header">
+              <span class="hub-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                后院炼金工坊
+              </span>
+              <span class="hub-card-badge" style="color:#9ae6b4;border-color:rgba(47,133,90,0.4);">3-Hit Combo</span>
+            </div>
+            <div class="hub-card-preview" style="margin-top:10px;">
+              当前坩埚：【舒筋止痛草膏】一图三派<br>
+              支持流派：市井温和派 / 行伍狂暴派 / 贵族典雅派<br>
+              工法手札：五大工序自由连击，打出 Perfect Combo
+            </div>
+          </div>
+          <div class="hub-card-footer">
+            <span>澄澈度百分制 · 药性对冲</span>
+            <span class="hub-card-enter-btn">生火开炉 →</span>
+          </div>
+        </div>
+
+        <!-- 小镇布告栏卡片 -->
+        <div class="hub-card" data-jump="notice-view" id="hub-card-notice">
+          <div>
+            <div class="hub-card-header">
+              <span class="hub-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+                小镇中心布告栏
+              </span>
+              <span class="hub-card-badge">3 张便签待交付</span>
+            </div>
+            <div class="hub-card-preview" style="margin-top:10px;">
+              · 玛尔塔大娘：急求揉面骨膏 (剩 2 天 · 24 银)<br>
+              · 见习剑士托马：远征急救膏 (剩 3 天 · 28 银)<br>
+              · 莫里斯管家：府邸无痕冷霜 (剩 4 天 · 55 银)
+            </div>
+          </div>
+          <div class="hub-card-footer">
+            <span>时限 2~5 天 · 居民心级羁绊</span>
+            <span class="hub-card-enter-btn">揭下便签 →</span>
+          </div>
+        </div>
+
+        <!-- 商会集运与市场卡片 -->
+        <div class="hub-card" data-jump="shipping-view" id="hub-card-shipping">
+          <div>
+            <div class="hub-card-header">
+              <span class="hub-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/></svg>
+                商会统购与原料市场
+              </span>
+              <span class="hub-card-badge">17:00 结算</span>
+            </div>
+            <div class="hub-card-preview" style="margin-top:10px;">
+              后门集运箱：当前待收成药 3 瓶 (预估 81 银)<br>
+              本周行情：草药原材上涨 +20%<br>
+              商会订购册：125% 基准价保证稳定供应链
+            </div>
+          </div>
+          <div class="hub-card-footer">
+            <span>每日 100% 保底 · 拒绝滞销</span>
+            <span class="hub-card-enter-btn">查阅账目 →</span>
+          </div>
+        </div>
+
+        <!-- 礼宾玻璃展柜卡片 -->
+        <div class="hub-card" data-jump="showcase-view" id="hub-card-showcase">
+          <div>
+            <div class="hub-card-header">
+              <span class="hub-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                礼宾玻璃陈列柜
+              </span>
+              <span class="hub-card-badge">上层引流 +65%</span>
+            </div>
+            <div class="hub-card-preview" style="margin-top:10px;">
+              当前展品：【舒筋止痛草膏 (贵族典雅派)】<br>
+              特性：★ 无味无息 ★ 极寒不冻 (澄澈 92)<br>
+              吸引客群：名门管家、土豪矿主、领主千金
+            </div>
+          </div>
+          <div class="hub-card-footer">
+            <span>高端名望 · 触发私密订购单</span>
+            <span class="hub-card-enter-btn">整饬展台 →</span>
+          </div>
+        </div>
+
+        <!-- 行会审查卡片 -->
+        <div class="hub-card" data-jump="audit-view" id="hub-card-audit">
+          <div>
+            <div class="hub-card-header">
+              <span class="hub-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                行会债务与主线进程
+              </span>
+              <span class="hub-card-badge" style="color:#feb2b2;border-color:rgba(185,60,60,0.4);">审查官驻店</span>
+            </div>
+            <div class="hub-card-preview" style="margin-top:10px;">
+              第一幕进度：【驱逐通告与挂落的招牌】<br>
+              当前应还：50 银币利息 (距封铺还剩 4 天)<br>
+              通关奖励：解锁后院铁门钥匙与深层工坊
+            </div>
+          </div>
+          <div class="hub-card-footer">
+            <span>执事维斯佩拉审核中</span>
+            <span class="hub-card-enter-btn">偿还借据 →</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         视图一：柜台前厅 (Front Counter View)
+         ======================================================================== -->
+    <section class="view-section" id="counter-view">
+      <div class="counter-grid">
+        <div class="customer-card wood-panel">
+          <div class="panel-header">
+            <h2>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              来客接待
+            </h2>
+            <span class="customer-title" id="customer-title">见习剑士</span>
+          </div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:12px;">
+            <div class="customer-portrait-box">
+              <span class="customer-archetype-tag" id="customer-archetype-tag">见习新人 · 好胜心切</span>
+              <div class="portrait-silhouette">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+              </div>
+            </div>
+            <div class="customer-name-row">
+              <span class="customer-name" id="customer-name">托马</span>
+              <button class="btn-secondary" id="btn-view-customer-profile" style="width:auto;padding:2px 8px;font-size:0.72rem;margin:0;">
+                查看人物手札
+              </button>
+            </div>
+            <div class="patience-container">
+              <div class="patience-header">
+                <span>顾客耐心储备 (行动点)</span>
+                <span id="patience-count-text" style="font-family:var(--font-sans);font-weight:700;color:#ffd875;">4 / 4</span>
+              </div>
+              <div class="patience-dots" id="patience-pips-container"></div>
+            </div>
+            <div class="speech-bubble" id="customer-speech-text">
+              “掌柜哥！这是上午在哥布林祭坛暗箱里翻到的短刃，刃上还刻着石纹呢！少说值 25 银币，你瞅瞅？我还急着去修盾牌呢！”
+            </div>
+          </div>
+        </div>
+
+        <div class="item-examination-area">
+          <div class="item-main-card">
+            <div class="item-badge-header">
+              <span class="item-category-chip" id="item-category-label">兵刃与法具</span>
+              <div class="item-declared-price">
+                对方要价：<span id="item-declared-price-val">25 银币</span>
+              </div>
+            </div>
+            <div class="item-title-row">
+              <h2 class="item-title" id="item-name-heading">覆着草渍的巡林客短刃</h2>
+            </div>
+            <div class="echo-orb-station" id="echo-orb-station" title="柜台常驻感知仪器：完全免费，仅反映暗藏特质总数">
+              <div class="echo-orb-indicator">
+                <div class="echo-sphere"></div>
+                <div class="echo-info-text">
+                  <span>回声宝珠共鸣：暗藏 </span>
+                  <strong id="echo-hidden-count">2</strong>
+                  <span> 个未探明特质 (纯数量 · 好坏未知)</span>
+                </div>
+              </div>
+              <span class="echo-free-tag">免费感知仪</span>
+            </div>
+            <div class="sensory-desc-box" id="item-symptom-desc">
+              刃面有一层干涸青黑的草木油皮，闻着带有一股微涩土腥气；单手空挥时，指背隐隐感到刀脊纹路在靠近护手处有不自然的凹凸停顿。
+            </div>
+            <div class="tags-inventory-box">
+              <span class="tags-label">特性标签识别状态：</span>
+              <div class="tags-flex-list" id="item-tags-flow"></div>
+            </div>
+          </div>
+
+          <div class="methods-control-panel">
+            <div class="methods-header">
+              <span class="methods-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                十大标准工坊检验手法
+              </span>
+              <span class="cost-tip">⚠️ 每次检验消耗 1 点耐心</span>
+            </div>
+            <div class="methods-grid-10" id="methods-button-grid"></div>
+          </div>
+        </div>
+
+        <div class="counter-right-col">
+          <div class="journal-drawer">
+            <span class="journal-stamp">手札档案</span>
+            <div class="journal-header-text">《老工匠验物备忘·找茬对比》</div>
+            <p style="font-size:0.75rem;color:var(--text-dark-dim);margin-bottom:8px;">
+              对比当前表征，正解细节完全吻合；干扰项在关键修饰词上有微妙出入！
+            </p>
+            <div class="journal-clue-list" id="journal-clues-list"></div>
+            <button class="btn-secondary" id="btn-read-journal-action" style="margin-top:10px;background:#eadecb;color:#3b2a1a;border-color:#bda88d;">
+              📖 深入翻阅对比 (消耗 1 点耐心)
+            </button>
+          </div>
+
+          <div class="bargain-panel wood-panel">
+            <div class="panel-header" style="background:transparent;border-bottom:1px solid rgba(198,156,88,0.2);">
+              <h3 style="font-size:0.86rem;">柜台议价 · 落子无悔</h3>
+              <span style="font-size:0.72rem;color:var(--text-dim);">消耗 1 耐心</span>
+            </div>
+            <div class="panel-body" style="padding:12px;">
+              <p style="font-size:0.75rem;color:var(--text-dim);">
+                开价后立即进入心理判定，绝无后悔追加鉴定的余地：
+              </p>
+              <div class="bargain-inputs">
+                <input type="number" class="input-wood" id="input-offer-silver" value="12" min="1" max="999">
+                <div class="currency-symbol">银币</div>
+              </div>
+              <button class="btn-gold" id="btn-submit-offer">
+                正式开价买入 (成交判定)
+              </button>
+              <button class="btn-secondary" id="btn-pass-customer">
+                婉拒不收 · 送客离店
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         视图二：后院炼金工坊 (Alchemy Atelier View) - 5 种方式 3-Hit Combo
+         ======================================================================== -->
+    <section class="view-section" id="alchemy-view">
+      <div class="alchemy-grid">
+        <div class="recipe-book-panel wood-panel">
+          <div class="panel-header">
+            <h2>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              工坊秘药谱册
+            </h2>
+            <span style="font-size:0.72rem;color:var(--text-dim);">一图三派</span>
+          </div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:10px;">
+            <input type="text" class="recipe-search-box" placeholder="搜索配方名称或流派..." id="recipe-search-input">
+            <div class="recipe-cards-list" id="recipe-catalog-list"></div>
+          </div>
+        </div>
+
+        <div class="cauldron-stage">
+          <div class="cauldron-visual-box">
+            <div class="cauldron-pot">
+              <div class="liquid-bubble-glow" id="cauldron-bubble-glow"></div>
+              <svg class="cauldron-svg" viewBox="0 0 100 100" fill="none">
+                <path d="M20 35C20 65 30 85 50 85C70 85 80 65 80 35H20Z" fill="#1b120c" stroke="#c69c58" stroke-width="3"/>
+                <path d="M15 35H85V40H15V35Z" fill="#2d1f15" stroke="#c69c58" stroke-width="2"/>
+                <path d="M12 40C12 40 8 48 18 50" stroke="#c69c58" stroke-width="2"/>
+                <path d="M88 40C88 40 92 48 82 50" stroke="#c69c58" stroke-width="2"/>
+                <path d="M30 85L20 95" stroke="#c69c58" stroke-width="3"/>
+                <path d="M70 85L80 95" stroke="#c69c58" stroke-width="3"/>
+              </svg>
+            </div>
+            <div class="clarity-gauge-wrap">
+              <div class="clarity-labels">
+                <span>药汤澄澈度 (纯净度)</span>
+                <span class="clarity-val-badge" id="clarity-numeric-value">58 / 100</span>
+              </div>
+              <div class="clarity-track">
+                <div class="clarity-fill" id="clarity-progress-bar" style="width:58%;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text-dim);margin-top:4px;">
+                <span>25% 报废线</span>
+                <span>50% 标准良品</span>
+                <span>80% 完美无瑕</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="combo-slots-container">
+            <div class="combo-slots-header">
+              <span class="combo-slots-title">三阶段连携加工节拍 (3-Hit Combo)</span>
+              <span class="combo-status-badge" id="combo-flow-status">开锅待命 · 投料就绪</span>
+            </div>
+            <div class="combo-slots-row">
+              <div class="combo-slot-card" id="combo-slot-1">
+                <span class="combo-slot-number">#1</span>
+                <span>待出招...</span>
+              </div>
+              <div class="combo-slot-card" id="combo-slot-2">
+                <span class="combo-slot-number">#2</span>
+                <span>待出招...</span>
+              </div>
+              <div class="combo-slot-card" id="combo-slot-3">
+                <span class="combo-slot-number">#3</span>
+                <span>待出招...</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="five-methods-strip" id="five-methods-container"></div>
+
+          <div style="display:flex;gap:12px;">
+            <button class="btn-gold" id="btn-finish-cauldron" style="flex:2;">
+              揭盖收瓶 · 结算成药品级
+            </button>
+            <button class="btn-secondary" id="btn-reset-cauldron" style="flex:1;margin:0;">
+              倒掉重开 (重置坩埚)
+            </button>
+          </div>
+        </div>
+
+        <div class="alchemy-right-col">
+          <div class="branches-card-panel">
+            <div class="branch-nav-tabs" id="branch-nav-tabs-bar"></div>
+            <div class="branch-detail-box" id="branch-detail-display"></div>
+          </div>
+
+          <div class="polar-meter-box">
+            <div class="panel-header" style="background:transparent;border:none;padding:0 0 8px 0;">
+              <h3 style="font-size:0.85rem;">七维药性对冲平衡仪 [-50 ~ +50]</h3>
+            </div>
+            <div class="polar-axis-group">
+              <div class="polar-axis-item">
+                <div class="polar-axis-labels">
+                  <span style="color:#b93c3c;">【热性】Calor</span>
+                  <span style="color:#4a90e2;">【冰性】Frigor</span>
+                </div>
+                <div class="polar-track">
+                  <div class="polar-center-line"></div>
+                  <div class="polar-fill-bar" id="polar-bar-calor" style="left:50%;width:18%;background:#4a90e2;"></div>
+                </div>
+              </div>
+              <div class="polar-axis-item">
+                <div class="polar-axis-labels">
+                  <span style="color:#e68a2e;">【发散】Volat</span>
+                  <span style="color:#8a63d2;">【敛聚】Fixus</span>
+                </div>
+                <div class="polar-track">
+                  <div class="polar-center-line"></div>
+                  <div class="polar-fill-bar" id="polar-bar-volat" style="left:50%;width:12%;background:#e68a2e;"></div>
+                </div>
+              </div>
+              <div class="polar-axis-item">
+                <div class="polar-axis-labels">
+                  <span style="color:#d4af37;">【硬化】Durus</span>
+                  <span style="color:#2f855a;">【柔顺】Lene</span>
+                </div>
+                <div class="polar-track">
+                  <div class="polar-center-line"></div>
+                  <div class="polar-fill-bar" id="polar-bar-dur" style="left:50%;width:22%;background:#2f855a;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         视图三：小镇布告栏 (Town Notice Board View)
+         ======================================================================== -->
+    <section class="view-section" id="notice-view">
+      <div class="notice-board-stage">
+        <div style="text-align:center;margin-bottom:20px;">
+          <h2 style="font-family:var(--font-display);font-size:1.4rem;color:#f0e2cd;letter-spacing:0.06em;">
+            艾尔姆小镇中心布告栏
+          </h2>
+          <p style="font-size:0.8rem;color:#c0ab92;margin-top:4px;">
+            镇民便签时限 2~5 天 · 完成委托收获超额赏金、居民心级好感与工坊回赠
+          </p>
+        </div>
+        <div class="board-pins-container" id="notice-board-pins-list"></div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         视图四：商会统购与市场 (Shipping & Market View)
+         ======================================================================== -->
+    <section class="view-section" id="shipping-view">
+      <div class="market-grid">
+        <div class="shipping-bin-panel wood-panel">
+          <div class="panel-header">
+            <h2>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              商会每日集运出货箱 (后门)
+            </h2>
+            <span style="font-size:0.75rem;color:var(--border-gold-glow);">每日 17:00 马车清算</span>
+          </div>
+          <div class="panel-body">
+            <p style="font-size:0.8rem;color:var(--text-dim);">
+              将多余药剂与翻新货随手扔进木箱，商会全额保底按基准市价 100% 收购，现金流永不卡死：
+            </p>
+            <div class="bin-crate-slot-grid" id="shipping-crate-slots-grid"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid rgba(198,156,88,0.2);">
+              <span style="font-size:0.85rem;">箱内预估结算款：</span>
+              <span id="shipping-estimated-total" style="font-family:var(--font-sans);font-weight:700;color:#ffd875;font-size:1.1rem;">
+                0 银币
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="newsletter-card">
+            <div class="newsletter-header">
+              <h3 id="newsletter-header-title">艾尔姆商会快讯 · 丰收之月 第一周</h3>
+              <span style="font-size:0.72rem;color:var(--text-dark-dim);">商会官方物价情报单</span>
+            </div>
+            <div style="margin-bottom:10px;">
+              <strong style="font-size:0.78rem;color:#7d5939;text-transform:uppercase;">【本周生效行情】：</strong>
+              <div id="newsletter-active-buffs" style="margin-top:4px;"></div>
+            </div>
+            <div>
+              <strong style="font-size:0.78rem;color:#b93c3c;text-transform:uppercase;">【下周市场趋势预警 (提前囤货)】：</strong>
+              <div id="newsletter-forecast-list" style="margin-top:4px;"></div>
+            </div>
+          </div>
+
+          <div class="wood-panel" style="padding:14px;">
+            <div class="panel-header" style="background:transparent;border:none;padding:0 0 8px 0;">
+              <h3 style="font-size:0.88rem;">商会原料订购册 (基准价 125% · 次晨送达)</h3>
+            </div>
+            <table class="wholesale-table">
+              <thead>
+                <tr>
+                  <th>原料品名</th>
+                  <th>品类</th>
+                  <th>市价</th>
+                  <th>加急订购价</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="wholesale-catalog-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         视图五：礼宾玻璃陈列柜 (Showcase View)
+         ======================================================================== -->
+    <section class="view-section" id="showcase-view">
+      <div class="showcase-grid">
+        <div class="glass-cabinet-card">
+          <div class="glass-reflection-overlay"></div>
+          <div style="text-align:center;margin-bottom:14px;">
+            <h2 style="font-family:var(--font-display);font-size:1.15rem;color:#ffd875;">
+              前厅礼宾玻璃陈列柜
+            </h2>
+            <span style="font-size:0.75rem;color:var(--text-dim);">
+              专门陈列无瑕级成药 (澄澈度 ≥ 80) 或罕见古物，决定整间铺子的品位与名望
+            </span>
+          </div>
+
+          <div class="cabinet-pedestal">
+            <svg width="55" height="55" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="1.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            <strong style="font-size:1.05rem;color:#fff;" id="showcase-item-name">
+              舒筋止痛草膏 (贵族典雅派)
+            </strong>
+            <span style="font-size:0.78rem;color:#ffd875;" id="showcase-item-tags">
+              ★ 无味无息 ★ 极寒不冻 (澄澈度 92)
+            </span>
+            <div style="font-size:0.74rem;color:#9ae6b4;background:rgba(47,133,90,0.2);padding:2px 8px;border-radius:4px;" id="showcase-allure-rate">
+              名门大管家与富商进店吸引率：+65% (极高)
+            </div>
+          </div>
+
+          <div style="margin-top:14px;text-align:center;">
+            <button class="btn-gold" id="btn-place-in-showcase" style="max-width:220px;margin:0 auto;">
+              更换展出宝物
+            </button>
+          </div>
+        </div>
+
+        <div class="wood-panel" style="padding:18px;">
+          <div class="panel-header" style="background:transparent;border:none;padding:0 0 10px 0;">
+            <h3>上层客群接待记录与品鉴准则</h3>
+          </div>
+          <div style="font-size:0.8rem;line-height:1.7;color:#d8c6b2;display:flex;flex-direction:column;gap:10px;">
+            <div style="background:#1b130e;border:1px solid rgba(198,156,88,0.2);border-radius:6px;padding:10px;">
+              <strong style="color:#ffd875;">🎩 名门大管家莫里斯：</strong>
+              <p style="margin-top:3px;">“府邸不要有草腥味的杂药。只要澄澈度达到 80 点且带有【无味无息】词缀，府上按三倍全款包销，绝不议价。”</p>
+            </div>
+            <div style="background:#1b130e;border:1px solid rgba(198,156,88,0.2);border-radius:6px;padding:10px;">
+              <strong style="color:#ffd875;">💍 矿主富商巴隆：</strong>
+              <p style="margin-top:3px;">“本老爷只要拿去宴会倍有面子的稀奇物件！器物必须擦得锃亮，带古代铭文或雷纹的，出价翻倍全收！”</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         视图六：行会债务审查 (Guild Audit View)
+         ======================================================================== -->
+    <section class="view-section" id="audit-view">
+      <div class="wood-panel" style="max-width:680px;margin:0 auto;padding:20px;">
+        <div class="panel-header" style="background:transparent;border-bottom:1px solid rgba(198,156,88,0.25);padding:0 0 12px 0;">
+          <h2>商人联合公会 · 季度工坊审查账目</h2>
+          <span style="font-size:0.75rem;color:#feb2b2;">法定通告单</span>
+        </div>
+        <div class="panel-body" style="padding:16px 0;">
+          <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;">
+            <div style="width:60px;height:60px;border-radius:50%;background:#302018;border:2px solid var(--border-gold);display:flex;align-items:center;justify-content:center;color:var(--border-gold-glow);flex-shrink:0;">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+              <h3 style="color:#fff;font-size:1.05rem;">前任掌柜布兰老爹 (Master Bran) 遗留垫资</h3>
+              <p style="font-size:0.78rem;color:var(--text-dim);margin-top:3px;">
+                驻店审查官：<strong>维斯佩拉 (半精灵女性 · 公会三级清算执事)</strong>
+              </p>
+            </div>
+          </div>
+
+          <div style="background:#17110c;border:1px solid rgba(198,156,88,0.2);border-radius:8px;padding:14px;margin-bottom:18px;line-height:1.75;font-size:0.82rem;">
+            <p>· 第一期还本利息：<strong style="color:#ffd875;">50 银币</strong> (还款倒计时：还剩 4 天)</p>
+            <p>· 逾期惩罚：铺面钥匙收回、查封后院工坊</p>
+            <p>· 通关奖励：维斯佩拉交还布兰老爹遗留的【后院铁门钥匙】，解锁第二幕【地下室黄铜密锁】！</p>
+          </div>
+
+          <button class="btn-gold" id="btn-pay-audit-silver" style="font-size:0.98rem;padding:11px;">
+            全款偿还第一期借据 (支付 50 银币)
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================================================
+       模态框一：人物手札档案全览抽屉 (Character Dossier Modal)
+       ========================================================================== -->
+  <div class="drawer-modal-overlay" id="modal-characters-dossier">
+    <div class="drawer-window">
+      <div class="panel-header" style="background:#1b130e;border-bottom:1px solid var(--border-gold);">
+        <h3 style="color:#ffd875;font-size:0.98rem;display:flex;align-items:center;gap:8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          小镇人物手札与羁绊档案 (全 6 位常驻居民)
+        </h3>
+        <button class="drawer-close-btn" data-close-modal="modal-characters-dossier">✕</button>
+      </div>
+      <div class="drawer-body-scroll" id="characters-dossier-content">
+        <!-- 由 JS 渲染全部居民档案卡片 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       模态框二：24 种炼药标签全科图鉴 (Tag Encyclopedia Modal)
+       ========================================================================== -->
+  <div class="drawer-modal-overlay" id="modal-tag-encyclopedia">
+    <div class="drawer-window">
+      <div class="panel-header" style="background:#1b130e;border-bottom:1px solid var(--border-gold);">
+        <h3 style="color:#ffd875;font-size:0.98rem;display:flex;align-items:center;gap:8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          24 种工坊炼药物性标签全科图鉴
+        </h3>
+        <button class="drawer-close-btn" data-close-modal="modal-tag-encyclopedia">✕</button>
+      </div>
+      <div class="drawer-body-scroll" id="tag-encyclopedia-content">
+        <!-- 由 JS 渲染 24 大标签卡片 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       模态框三：成就勋章陈列室 (Achievements Modal)
+       ========================================================================== -->
+  <div class="drawer-modal-overlay" id="modal-achievements-vault">
+    <div class="drawer-window" style="max-width:580px;">
+      <div class="panel-header" style="background:#1b130e;border-bottom:1px solid var(--border-gold);">
+        <h3 style="color:#ffd875;font-size:0.98rem;display:flex;align-items:center;gap:8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+          掌柜名匠成就徽章室
+        </h3>
+        <button class="drawer-close-btn" data-close-modal="modal-achievements-vault">✕</button>
+      </div>
+      <div class="drawer-body-scroll" id="achievements-vault-content">
+        <!-- 由 JS 渲染成就徽章 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       LLM 唯象感官叙事模态框 (LLM Sensory Simulator Modal)
+       ========================================================================== -->
+  <div class="llm-modal-overlay" id="llm-sensory-modal">
+    <div class="llm-modal-window">
+      <div class="panel-header" style="background:#1b130e;border-bottom:1px solid var(--border-gold);">
+        <h3 id="llm-modal-headline" style="color:#ffd875;font-size:0.95rem;">
+          唯象感官反馈
+        </h3>
+        <button id="btn-close-llm-modal" style="background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:1.2rem;line-height:1;">
+          ✕
+        </button>
+      </div>
+      <div class="panel-body" style="padding:16px;">
+        <div class="llm-output-box" id="llm-modal-content"></div>
+        <div style="text-align:right;">
+          <button class="btn-gold" id="btn-ack-llm-modal" style="width:auto;padding:6px 18px;font-size:0.82rem;">
+            知晓并收纳
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       全局内置 Toast 通知容器 (Internal Toast Notification Stack)
+       ========================================================================== -->
+  <div class="toast-stack" id="toast-stack"></div>
+
+  <!-- 脚本引用 -->
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

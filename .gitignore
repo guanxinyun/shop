@@ -1,0 +1,13 @@
+# Node / Build artifacts
+node_modules/
+dist/
+build/
+
+# Temp / Cache
+.playwright-mcp/
+*.log
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
