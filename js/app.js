@@ -1121,11 +1121,16 @@
     // 绑定模态框打开与关闭触发
     const charBtn = document.getElementById('nav-btn-characters-modal');
     const encyBtn = document.getElementById('nav-btn-encyclopedia-modal');
+    const saveBtn = document.getElementById('nav-btn-save-modal');
     const debtBadge = document.getElementById('hud-debt-badge');
     const moneyDisplay = document.getElementById('player-money-display');
 
     if (charBtn) charBtn.addEventListener('click', () => openModal('modal-characters-dossier'));
     if (encyBtn) encyBtn.addEventListener('click', () => openModal('modal-tag-encyclopedia'));
+    if (saveBtn) saveBtn.addEventListener('click', () => {
+      renderSaveSlotsUI();
+      openModal('modal-save-ledger');
+    });
     if (debtBadge) debtBadge.addEventListener('click', () => switchView('audit-view'));
     if (moneyDisplay) moneyDisplay.addEventListener('click', () => openModal('modal-achievements-vault'));
 
@@ -1137,6 +1142,9 @@
       });
     });
 
+    // 绑定存档导出与导入
+    setupSaveImportExport();
+
     // 主页卡片快捷跳转
     document.querySelectorAll('.hub-card').forEach(card => {
       card.addEventListener('click', () => {
@@ -1147,6 +1155,156 @@
 
     const homeTrigger = document.getElementById('brand-home-trigger');
     if (homeTrigger) homeTrigger.addEventListener('click', () => switchView('hub-view'));
+  }
+
+  // ==========================================================================
+  // 掌柜手账存读档引擎 (LocalStorage + File Export/Import)
+  // ==========================================================================
+  function renderSaveSlotsUI() {
+    const container = document.getElementById('save-slots-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const slots = ['slot_1', 'slot_2', 'slot_3'];
+    slots.forEach((slotKey, idx) => {
+      const raw = localStorage.getItem(`atelier_save_${slotKey}`);
+      let slotData = null;
+      if (raw) {
+        try { slotData = JSON.parse(raw); } catch (e) {}
+      }
+
+      const card = document.createElement('div');
+      card.style.cssText = 'background:#1c1510;border:1px solid rgba(198,156,88,0.3);border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;';
+
+      if (slotData) {
+        card.innerHTML = `
+          <div>
+            <strong style="color:#ffd875;font-size:0.9rem;">【手账档案 0${idx + 1}】</strong>
+            <span style="font-size:0.72rem;color:var(--text-dim);margin-left:6px;">${slotData.saveTime || '旧日记录'}</span>
+            <div style="font-size:0.76rem;color:#dfd2c0;margin-top:3px;">
+              ${slotData.season} · 资金：${slotData.coins.silver} 银币 · 负债剩 ${slotData.debt.daysRemaining} 天
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-gold" style="width:auto;padding:5px 12px;font-size:0.75rem;" id="btn-save-${slotKey}">
+              覆盖存档
+            </button>
+            <button class="btn-secondary" style="width:auto;padding:5px 12px;font-size:0.75rem;margin:0;" id="btn-load-${slotKey}">
+              读取手账
+            </button>
+          </div>
+        `;
+      } else {
+        card.innerHTML = `
+          <div>
+            <strong style="color:var(--text-dim);font-size:0.9rem;">【手账档案 0${idx + 1}】空白羊皮纸</strong>
+            <div style="font-size:0.74rem;color:#7c6958;margin-top:2px;">尚无记录</div>
+          </div>
+          <div>
+            <button class="btn-gold" style="width:auto;padding:5px 14px;font-size:0.75rem;" id="btn-save-${slotKey}">
+              记录手账
+            </button>
+          </div>
+        `;
+      }
+
+      const saveBtn = card.querySelector(`#btn-save-${slotKey}`);
+      const loadBtn = card.querySelector(`#btn-load-${slotKey}`);
+
+      if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+          saveToSlot(slotKey, idx + 1);
+        });
+      }
+      if (loadBtn) {
+        loadBtn.addEventListener('click', () => {
+          loadFromSlot(slotKey, idx + 1);
+        });
+      }
+
+      container.appendChild(card);
+    });
+  }
+
+  function saveToSlot(slotKey, num) {
+    const saveData = {
+      ...state,
+      saveTime: new Date().toLocaleString()
+    };
+    localStorage.setItem(`atelier_save_${slotKey}`, JSON.stringify(saveData));
+    AudioEngine.playCoin();
+    showToast('手账已封印保存', `工坊进度已成功录入手账档案 0${num}！`, 'success');
+    renderSaveSlotsUI();
+  }
+
+  function loadFromSlot(slotKey, num) {
+    const raw = localStorage.getItem(`atelier_save_${slotKey}`);
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      Object.assign(state, data);
+      updateHUD();
+      renderCustomerPanel();
+      renderItemExamCard();
+      renderRecipeCardsList();
+      renderCurrentRecipeBranchDetails();
+      renderShippingBinView();
+      AudioEngine.playOrb();
+      showToast('手账读取成功', `已恢复手账档案 0${num} 的工坊记录！`, 'perfect-combo');
+      closeModal('modal-save-ledger');
+    } catch (e) {
+      showToast('读取失败', '存档数据解析异常！', 'error');
+    }
+  }
+
+  function setupSaveImportExport() {
+    const exportBtn = document.getElementById('btn-export-savefile');
+    const importInput = document.getElementById('input-import-savefile');
+
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        const saveData = {
+          ...state,
+          saveTime: new Date().toLocaleString(),
+          gameSignature: 'Atelier_Pawnshop_Savefile_v1'
+        };
+        const blob = new Blob([JSON.stringify(saveData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `工坊物语_掌柜手账_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        AudioEngine.playCoin();
+        showToast('档案导出成功', '已生成独立 .json 掌柜手账文件！', 'success');
+      });
+    }
+
+    if (importInput) {
+      importInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const data = JSON.parse(evt.target.result);
+            Object.assign(state, data);
+            updateHUD();
+            renderCustomerPanel();
+            renderItemExamCard();
+            renderRecipeCardsList();
+            renderCurrentRecipeBranchDetails();
+            renderShippingBinView();
+            AudioEngine.playOrb();
+            showToast('外部手账导入成功', '已无缝继承该档案的所有资产与配方进度！', 'perfect-combo');
+            closeModal('modal-save-ledger');
+          } catch (err) {
+            showToast('导入失败', '所选文件并非合法的工坊手账档案！', 'error');
+          }
+        };
+        reader.readAsText(file);
+      });
+    }
   }
 
   function openModal(id) {

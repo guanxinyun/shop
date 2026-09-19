@@ -1,0 +1,33 @@
+{
+  "name": "atelier-shop-rpg",
+  "version": "1.0.0",
+  "description": "工坊物语：杂货铺掌柜的记账本 - 日式轻西幻生活流模拟经营RPG",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64",
+    "cap:sync": "cap sync",
+    "cap:build:android": "cap build android",
+    "cap:open:android": "cap open android"
+  },
+  "keywords": ["game", "rpg", "atelier", "web-game", "electron", "capacitor"],
+  "author": "guanxinyun",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1",
+    "@capacitor/core": "^5.6.0",
+    "@capacitor/cli": "^5.6.0",
+    "@capacitor/android": "^5.6.0"
+  },
+  "build": {
+    "appId": "com.guanxinyun.ateliershop",
+    "productName": "工坊物语",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": ["nsis", "portable"]
+    }
+  }
+}
