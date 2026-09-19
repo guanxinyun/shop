@@ -155,6 +155,10 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         <span>掌柜手账(存档)</span>
       </button>
+      <button class="nav-tab-btn" id="nav-btn-close-shop-modal" style="color:#f6a5a5;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>打烊清算</span>
+      </button>
       <button class="nav-tab-btn" data-view="audit-view" id="nav-btn-audit">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <span>行会审查</span>
@@ -480,6 +484,17 @@
                 <span>50% 标准良品</span>
                 <span>80% 完美无瑕</span>
               </div>
+            </div>
+          </div>
+
+          <!-- 原料投入槽与背包选料 -->
+          <div class="wood-panel" style="padding:12px;background:#18110b;border-color:rgba(198,156,88,0.25);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <strong style="font-size:0.82rem;color:#ffd875;">📦 投入工坊主辅料 (从背包勾选投入)：</strong>
+              <span id="cauldron-loaded-mats-count" style="font-size:0.72rem;color:var(--text-dim);">已选 1 份基底草药</span>
+            </div>
+            <div id="cauldron-materials-picker" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;">
+              <!-- 由 JS 渲染背包内可用原材 -->
             </div>
           </div>
 
@@ -823,6 +838,59 @@
             <input type="file" id="input-import-savefile" accept=".json" style="display:none;">
           </label>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       模态框五：每日打烊清算与昼夜轮转账单 (Daily Nightly Settlement Modal)
+       ========================================================================== -->
+  <div class="drawer-modal-overlay" id="modal-nightly-settlement">
+    <div class="drawer-window" style="max-width:540px;background:var(--bg-parchment);color:var(--text-dark);">
+      <div class="panel-header" style="background:#e8dcc8;border-bottom:2px solid #3b281b;">
+        <h3 style="color:#2a1c11;font-size:1.05rem;display:flex;align-items:center;gap:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7d5939" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          《工坊日暮打烊结算单》
+        </h3>
+        <button class="drawer-close-btn" data-close-modal="modal-nightly-settlement" style="color:#2a1c11;">✕</button>
+      </div>
+      <div class="drawer-body-scroll" style="padding:20px;font-size:0.85rem;line-height:1.7;">
+        <div style="text-align:center;border-bottom:1px dashed #bda88d;padding-bottom:12px;margin-bottom:14px;">
+          <div style="font-family:var(--font-display);font-size:1.15rem;font-weight:700;color:#20140b;" id="settle-day-title">
+            第 3 日 · 丰收之月 营业盘点
+          </div>
+          <span style="font-size:0.75rem;color:#705844;">街面马车铃声渐远，油灯余温尚存</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;">
+            <span>📦 商会每日出货箱自动结款：</span>
+            <strong style="color:#2f855a;font-family:var(--font-sans);" id="settle-shipping-gain">+ 0 银币</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>📋 小镇布告栏委托结算收益：</span>
+            <strong style="color:#2f855a;font-family:var(--font-sans);" id="settle-quest-gain">+ 0 银币</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>🛒 柜台采购与原料订购支出：</span>
+            <strong style="color:#b93c3c;font-family:var(--font-sans);" id="settle-expense-cost">- 0 银币</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;border-top:1px dotted #bda88d;padding-top:8px;">
+            <span>💰 今日纯利结算：</span>
+            <strong style="font-family:var(--font-sans);font-size:1.05rem;" id="settle-net-profit">+ 0 银币</strong>
+          </div>
+        </div>
+
+        <div style="background:#f1e6d4;border:1px solid #d4c2aa;border-radius:6px;padding:12px;margin-bottom:18px;">
+          <strong style="color:#804010;">⚠️ 行会季度借据倒计时：</strong>
+          <p id="settle-debt-countdown-text" style="font-size:0.8rem;color:#4a382a;margin-top:2px;">
+            距离维斯佩拉执事登门清算还剩 4 天 (当期需偿还 50 银币)
+          </p>
+        </div>
+
+        <button class="btn-gold" id="btn-confirm-next-day" style="font-size:0.95rem;padding:10px;">
+          吹熄油灯 · 进入次日清晨
+        </button>
       </div>
     </div>
   </div>

@@ -535,6 +535,8 @@
         tags: item.tags.filter(t => t.revealed).map(t => t.name),
         clarity: 70
       });
+      renderCauldronMaterialsPicker();
+      renderShippingBinView();
 
       showLLMSensoryModal(
         '交易达成！货款两讫',
@@ -560,23 +562,139 @@
     }
   }
 
+  // ==========================================================================
+  // 程序化无限货物与顾客动态生成引擎 (Procedural Generator)
+  // ==========================================================================
+  function generateRandomCustomerAndItem() {
+    const archetypes = [
+      { name: '布莱克', title: '巡林猎兵', archetype: '退伍老兵 · 务实干练', speech: '打猎换下来的旧家伙，掌柜给个实在数，够买两瓶烈酒和防冻油就行。', patience: 4 },
+      { name: '艾莉亚', title: '学者学徒', archetype: '魔法学徒 · 窘迫青涩', speech: '导、导师让我出来变卖一些试做构件换取羊皮纸经费，请您千万别压价太狠呀……', patience: 3 },
+      { name: '加文', title: '商队护卫长', archetype: '远行客商 · 眼神老辣', speech: '刚翻过黑石隘口，路上捡着件硬货。掌柜的你要是识货，以后商队的货优先送你店里。', patience: 4 },
+      { name: '西比尔', title: '庄园女仆长', archetype: '名门女仆 · 严苛细致', speech: '夫人吩咐清理库房旧器，这件饰物虽然有些岁月，但绝非市井破烂，掌柜请过目。', patience: 3 },
+      { name: '洛克', title: '矿山石匠', archetype: '粗豪矮人 · 直来直去', speech: '矿道深处挖出的怪矿石，沉得跟铅块似的，老汉斯说他不要，你这里收不收？', patience: 4 }
+    ];
+
+    const itemBases = [
+      { name: '附带温热的伴生矿石', cat: '矿石与贵金', basePrice: 20, methods: ['acoustic_tap', 'gentle_heat'] },
+      { name: '风干多年的异兽韧角', cat: '兽骨与毛羽', basePrice: 18, methods: ['torsion_flex', 'lamp_inspect'] },
+      { name: '褪色的古代学徒抄本', cat: '纸帛与古卷', basePrice: 24, methods: ['lamp_inspect', 'fingertip_trace'] },
+      { name: '雕有飞鸟纹的黄铜怀表', cat: '器皿与用具', basePrice: 32, methods: ['lens_inspect', 'acoustic_tap'] },
+      { name: '生有淡蓝绒毛的阴生块茎', cat: '草药与生息', basePrice: 15, methods: ['drop_reagent', 'gentle_heat'] }
+    ];
+
+    const traitsPool = [
+      { name: '内部冷隔暗伤', mod: -0.35, type: 'negative', validMethod: 'acoustic_tap', hint: '骨锤轻敲中段，回声啪的一声发哑短促，内里有断层！' },
+      { name: '深层宿存温热', mod: +0.40, type: 'positive', validMethod: 'gentle_heat', hint: '微火烘烤边缘，隐隐透出一股微香热气，纯度极高！' },
+      { name: '古代隐性避尘回路', mod: +0.60, type: 'rare', validMethod: 'lamp_inspect', hint: '聚光灯切入反光，底座内圈浮现出旧工坊避尘刻印！' },
+      { name: '内部细微磨损滑牙', mod: -0.25, type: 'negative', validMethod: 'lens_inspect', hint: '双重放大镜细查，齿轮咬合间已磨损大半，受力易滑！' },
+      { name: '活性草露未褪', mod: +0.30, type: 'positive', validMethod: 'drop_reagent', hint: '刮粉滴入工坊试剂，试剂呈澄澈翡翠色，药性鲜活！' }
+    ];
+
+    const chosenArch = archetypes[Math.floor(Math.random() * archetypes.length)];
+    const chosenBase = itemBases[Math.floor(Math.random() * itemBases.length)];
+    const chosenTrait = traitsPool[Math.floor(Math.random() * traitsPool.length)];
+
+    return {
+      id: `dynamic_cust_${Date.now()}`,
+      name: chosenArch.name,
+      title: chosenArch.title,
+      archetype: chosenArch.archetype,
+      speech: chosenArch.speech,
+      patience: chosenArch.patience,
+      maxPatience: chosenArch.patience,
+      targetItem: {
+        id: `dynamic_item_${Date.now()}`,
+        name: chosenBase.name,
+        category: chosenBase.cat,
+        declaredPriceSilver: Math.round(chosenBase.basePrice * 1.5),
+        basePriceSilver: chosenBase.basePrice,
+        symptomText: `物件表面带有风尘沉淀的包浆，光泽微暗；在油灯逆光平视时，纹理起伏间偶见细微的断续光斑，手感略有些沉滞。`,
+        hiddenTotalCount: 2,
+        tags: [
+          { id: 'dt_0', name: '岁月风尘留痕', level: 0, revealed: true, mod: -0.05, type: 'neutral' },
+          { id: 'dt_1', name: chosenTrait.name, level: 3, revealed: false, validMethod: chosenTrait.validMethod, mod: chosenTrait.mod, type: chosenTrait.type, hint: chosenTrait.hint }
+        ],
+        journalEntries: [
+          {
+            isCorrect: true,
+            title: `《物性杂篇·${chosenTrait.name}辨识》`,
+            text: `此物若见光泽断续跳跃，重心略滞，多对应【${chosenTrait.name}】之相。\n推荐手法：【${window.ATELIER_DATA.workshopMethods.find(m => m.id === chosenTrait.validMethod).name}】。`
+          },
+          {
+            isCorrect: false,
+            title: `《伪记杂抄·表面受潮条》`,
+            text: `若表面暗淡，多为库房受潮生霉，切莫误判为内伤。\n推荐手法：【微火微温】。`
+          }
+        ]
+      }
+    };
+  }
+
   function cycleNextCustomer() {
-    state.pawnCustomerIndex = (state.pawnCustomerIndex + 1) % window.ATELIER_DATA.customers.length;
-    state.currentCustomer = JSON.parse(JSON.stringify(window.ATELIER_DATA.customers[state.pawnCustomerIndex]));
+    // 优先从预设池轮转，结束后无缝衔接程序化无限生成
+    state.pawnCustomerIndex = (state.pawnCustomerIndex + 1);
+    if (state.pawnCustomerIndex < window.ATELIER_DATA.customers.length) {
+      state.currentCustomer = JSON.parse(JSON.stringify(window.ATELIER_DATA.customers[state.pawnCustomerIndex]));
+    } else {
+      state.currentCustomer = generateRandomCustomerAndItem();
+    }
     renderCustomerPanel();
     renderItemExamCard();
     renderJournalClues();
   }
 
   // ==========================================================================
-  // 二、后院炼金工坊：5 种加工方式打 3-Hit Combo
+  // 二、后院炼金工坊：5 种加工方式打 3-Hit Combo 与真实选料消耗
   // ==========================================================================
   function initAlchemyView() {
     renderRecipeCardsList();
+    renderCauldronMaterialsPicker();
     renderFiveMethodsButtons();
     renderComboSlots();
     renderCurrentRecipeBranchDetails();
     setupAlchemyEvents();
+  }
+
+  function renderCauldronMaterialsPicker() {
+    const picker = document.getElementById('cauldron-materials-picker');
+    const countLabel = document.getElementById('cauldron-loaded-mats-count');
+    if (!picker) return;
+    picker.innerHTML = '';
+
+    // 筛选背包中可用于投入坩埚的素材或草药
+    const materials = state.inventoryItems.filter(item => item.type === 'material' || item.type === 'herb');
+
+    if (materials.length === 0) {
+      picker.innerHTML = `
+        <div style="font-size:0.75rem;color:var(--text-dim);padding:4px 8px;">
+          暂无可用原料。可从柜台向猎户收购，或前往【商会订购】预定原料！
+        </div>
+      `;
+      if (countLabel) countLabel.textContent = '使用工坊常备底水';
+      return;
+    }
+
+    if (countLabel) countLabel.textContent = `背包可用素材：${materials.length} 份 (点击投入)`;
+
+    materials.forEach((mat, idx) => {
+      const chip = document.createElement('div');
+      chip.style.cssText = 'background:#241a12;border:1px solid var(--border-gold);border-radius:6px;padding:4px 10px;font-size:0.75rem;color:#f3e5d0;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:6px;';
+      chip.innerHTML = `
+        <span>🍃 ${mat.name}</span>
+        <span style="color:#ffd875;font-size:0.7rem;">(投入)</span>
+      `;
+      chip.addEventListener('click', () => {
+        // 从背包中消耗该材料
+        state.inventoryItems.splice(idx, 1);
+        AudioEngine.playOrb();
+        state.alchemyClarity = Math.min(100, state.alchemyClarity + 10);
+        updateClarityGauge(state.alchemyClarity);
+        showToast('原料已入鼎', `将【${mat.name}】投入坩埚，药汤泛起醇厚香气！`, 'success');
+        renderCauldronMaterialsPicker();
+        renderShippingBinView();
+      });
+      picker.appendChild(chip);
+    });
   }
 
   function renderRecipeCardsList() {
@@ -837,6 +955,7 @@
     state.alchemyClarity = 50 + Math.floor(Math.random() * 20);
     renderComboSlots();
     updateClarityGauge(state.alchemyClarity);
+    renderCauldronMaterialsPicker();
     renderShippingBinView();
   }
 
@@ -988,7 +1107,20 @@
           state.coins.silver -= Math.round(item.orderPrice);
           AudioEngine.playCoin();
           updateHUD();
-          showToast('商会订购单已下达', `成功按 125% 基准价订购【${item.name}】，次日清晨邮差直送后院仓库！`, 'success');
+
+          // 订购直接备入背包原料仓
+          state.inventoryItems.push({
+            id: `ordered_${Date.now()}`,
+            name: item.name,
+            type: 'material',
+            price: item.basePrice,
+            tags: ['商会优质验标'],
+            clarity: 80
+          });
+          renderCauldronMaterialsPicker();
+          renderShippingBinView();
+
+          showToast('商会订购单已下达', `成功按 125% 基准价订购【${item.name}】，已直达后院仓库可供投鼎！`, 'success');
         });
       }
       tbody.appendChild(tr);
@@ -1122,6 +1254,7 @@
     const charBtn = document.getElementById('nav-btn-characters-modal');
     const encyBtn = document.getElementById('nav-btn-encyclopedia-modal');
     const saveBtn = document.getElementById('nav-btn-save-modal');
+    const closeShopBtn = document.getElementById('nav-btn-close-shop-modal');
     const debtBadge = document.getElementById('hud-debt-badge');
     const moneyDisplay = document.getElementById('player-money-display');
 
@@ -1131,6 +1264,7 @@
       renderSaveSlotsUI();
       openModal('modal-save-ledger');
     });
+    if (closeShopBtn) closeShopBtn.addEventListener('click', openDailySettlementModal);
     if (debtBadge) debtBadge.addEventListener('click', () => switchView('audit-view'));
     if (moneyDisplay) moneyDisplay.addEventListener('click', () => openModal('modal-achievements-vault'));
 
@@ -1324,7 +1458,85 @@
   }
 
   // ==========================================================================
-  // 八、LLM 唯象感官叙事模态框系统 (Sensory Modal)
+  // 八、每日打烊清算与昼夜轮转系统 (Nightly Settlement & Day Progression)
+  // ==========================================================================
+  function openDailySettlementModal() {
+    const titleEl = document.getElementById('settle-day-title');
+    const shippingEl = document.getElementById('settle-shipping-gain');
+    const debtCountEl = document.getElementById('settle-debt-countdown-text');
+    const confirmBtn = document.getElementById('btn-confirm-next-day');
+
+    // 计算商会集运箱结算款
+    let shippingSum = 0;
+    state.inventoryItems.forEach(i => { shippingSum += i.price; });
+
+    if (titleEl) titleEl.textContent = `第 ${state.day} 日 · ${state.season} 营业盘点`;
+    if (shippingEl) shippingEl.textContent = `+ ${shippingSum} 银币`;
+    if (debtCountEl) {
+      debtCountEl.textContent = `距离维斯佩拉执事登门清算还剩 ${state.debt.daysRemaining} 天 (当期需偿还 ${state.debt.currentDueSilver} 银币)`;
+    }
+
+    const netProfitEl = document.getElementById('settle-net-profit');
+    if (netProfitEl) netProfitEl.textContent = `+ ${shippingSum} 银币`;
+
+    openModal('modal-nightly-settlement');
+
+    if (confirmBtn) {
+      confirmBtn.onclick = () => {
+        progressToNextDay(shippingSum);
+      };
+    }
+  }
+
+  function progressToNextDay(shippingSum) {
+    // 结款入账
+    state.coins.silver += shippingSum;
+    state.inventoryItems = []; // 出货箱已由马车清空
+
+    // 天数推进
+    state.day++;
+    state.debt.daysRemaining--;
+
+    // 检查第 7 天还债审查结果
+    if (state.debt.daysRemaining <= 0) {
+      closeModal('modal-nightly-settlement');
+      if (state.coins.silver >= state.debt.currentDueSilver) {
+        state.coins.silver -= state.debt.currentDueSilver;
+        updateHUD();
+        AudioEngine.playPerfectCombo();
+        showLLMSensoryModal(
+          '【主线第一幕通关】执事的赞许与铁门钥匙',
+          `第七天清晨，薄雾散去。行会审查官维斯佩拉准时迈入铺门。核对完账本里整整齐齐的 50 枚现银，她推了推金丝眼镜，嘴角泛起一抹罕见的笑意：“布兰先生没有看错人。工坊正式解封，这是后院铁门钥匙。”`,
+          `恭喜达成第一阶段！解锁深层工坊与第二幕【地下室黄铜密锁】！`
+        );
+        state.debt.daysRemaining = 14;
+        state.debt.currentDueSilver = 120;
+      } else {
+        AudioEngine.playBreak();
+        showLLMSensoryModal(
+          '【审查危机】资产不足以清偿利息',
+          `维斯佩拉合上厚重的公文夹，语气冰冷而遗憾：“抱歉，掌柜先生。契约就是契约。你尚缺 ${state.debt.currentDueSilver - state.coins.silver} 银币。按照行会律法，本铺的经营特许将被扣押。”`,
+          `执事念在老掌柜情分上，宽限了您最后 2 天筹钱缓冲期，请尽快抛售库存或交付布告栏大单！`
+        );
+        state.debt.daysRemaining = 2;
+      }
+      return;
+    }
+
+    // 轮转新的一天
+    closeModal('modal-nightly-settlement');
+    updateHUD();
+    renderShippingBinView();
+    AudioEngine.playOrb();
+
+    // 刷新顾客与货物 (生成新客人)
+    cycleNextCustomer();
+
+    showToast('次日清晨来临', `第 ${state.day} 天阳光洒在柜台上，商会马车送来昨夜出货结款 ${shippingSum} 银币！`, 'perfect-combo');
+  }
+
+  // ==========================================================================
+  // 九、LLM 唯象感官叙事模态框系统 (Sensory Modal)
   // ==========================================================================
   function showLLMSensoryModal(headline, sensoryParagraph, reactionParagraph) {
     const modal = document.getElementById('llm-sensory-modal');
