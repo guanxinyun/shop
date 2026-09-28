@@ -21,6 +21,14 @@
       { id: 'inv_3', name: '打磨光亮的古银扣', type: 'relic', price: 55, tags: ['古代避风微刻纹'], clarity: 90 }
     ],
     shippingBin: [], // 专属商会出货箱待售队列，与背包彻底物理分离！
+    shelfSlots: [
+      { id: 'shelf_1', item: { id: 'shelf_sample_1', name: '舒筋止痛草膏 (市井温和派)', type: 'potion', price: 20, perfectPrice: 22, minPrice: 15, maxPrice: 28 }, listedPrice: 20, lastReaction: 'perfect' },
+      { id: 'shelf_2', item: null, listedPrice: 0, lastReaction: null },
+      { id: 'shelf_3', item: null, listedPrice: 0, lastReaction: null }
+    ],
+    priceHistoryBook: {
+      '舒筋止痛草膏 (市井温和派)': { perfect: 22, low: 15, high: 28 }
+    },
     showcaseItem: null
   };
 
@@ -358,6 +366,7 @@
     const descEl = document.getElementById('item-symptom-desc');
     const echoEl = document.getElementById('echo-hidden-count');
     const tagsContainer = document.getElementById('item-tags-flow');
+    const buyPriceVal = document.getElementById('btn-buy-price-val');
 
     if (titleEl) titleEl.textContent = item.name;
     if (catEl) {
@@ -365,6 +374,14 @@
     }
     if (priceEl) priceEl.textContent = `${item.declaredPriceSilver} 银币`;
     if (descEl) descEl.textContent = item.symptomText;
+
+    // 计算当前公道收购价
+    let calculatedFair = item.basePriceSilver;
+    item.tags.forEach(t => {
+      if (t.revealed) calculatedFair += item.basePriceSilver * t.mod;
+    });
+    const fairBuyPrice = Math.max(2, Math.round(calculatedFair * 0.85));
+    if (buyPriceVal) buyPriceVal.textContent = fairBuyPrice;
 
     const unrevealed = item.tags.filter(t => !t.revealed).length;
     if (echoEl) echoEl.textContent = unrevealed;
@@ -462,20 +479,21 @@
   }
 
   function setupCounterEvents() {
-    const bargainBtn = document.getElementById('btn-submit-offer');
-    const offerInput = document.getElementById('input-offer-silver');
+    const quickBuyBtn = document.getElementById('btn-quick-buy-item');
     const passBtn = document.getElementById('btn-pass-customer');
     const readBookBtn = document.getElementById('btn-read-journal-action');
     const viewCustBtn = document.getElementById('btn-view-customer-profile');
+    const openStockBtn = document.getElementById('btn-open-shelf-stock');
 
-    if (bargainBtn && offerInput) {
-      bargainBtn.addEventListener('click', () => {
-        const val = parseFloat(offerInput.value);
-        if (isNaN(val) || val <= 0) {
-          showToast('出价无效', '请输入合乎常理的银币数额。', 'warning');
-          return;
-        }
-        submitBargainOffer(val);
+    if (quickBuyBtn) {
+      quickBuyBtn.addEventListener('click', () => {
+        executeQuickBuy();
+      });
+    }
+
+    if (openStockBtn) {
+      openStockBtn.addEventListener('click', () => {
+        openShelfStockPicker();
       });
     }
 
@@ -504,65 +522,206 @@
         openModal('modal-characters-dossier');
       });
     }
+
+    renderMoonlighterShelf();
   }
 
-  function submitBargainOffer(offeredSilver) {
+  function executeQuickBuy() {
     const cust = state.currentCustomer;
     if (!cust) return;
     const item = cust.targetItem;
 
     let calculatedFair = item.basePriceSilver;
     item.tags.forEach(t => {
-      if (t.revealed) {
-        calculatedFair += item.basePriceSilver * t.mod;
-      }
+      if (t.revealed) calculatedFair += item.basePriceSilver * t.mod;
     });
+    const fairBuyPrice = Math.max(2, Math.round(calculatedFair * 0.85));
 
-    const minAcceptable = Math.max(4, Math.round(calculatedFair * 0.82));
-
-    if (offeredSilver >= minAcceptable) {
-      if (state.coins.silver < offeredSilver) {
-        showToast('现钱不足', '钱箱里的现银不够支付这笔收购款！', 'error');
-        return;
-      }
-
-      state.coins.silver -= Math.round(offeredSilver);
-      AudioEngine.playCoin();
-      updateHUD();
-
-      state.inventoryItems.push({
-        id: `purchased_${Date.now()}`,
-        name: item.name,
-        type: 'material',
-        price: Math.round(calculatedFair * 1.3),
-        tags: item.tags.filter(t => t.revealed).map(t => t.name),
-        clarity: 70
-      });
-      renderCauldronMaterialsPicker();
-      renderShippingBinView();
-
-      showLLMSensoryModal(
-        '交易达成！货款两讫',
-        `你从抽屉里数出 ${offeredSilver} 枚银币推了过去。顾客仔细验过硬币成色，脸上的防备化作一抹笑意：“掌柜的爽快人，这东西归你了，回见！”`,
-        `货物已收入库房。落子无悔，现在这件物品的所有隐藏底牌都已锁定。`
-      );
-      showToast('买入成功', `以 ${offeredSilver} 银币收下【${item.name}】！`, 'success');
-      cycleNextCustomer();
-    } else {
-      cust.patience -= 2;
-      renderCustomerPanel();
-      if (cust.patience <= 0) {
-        showLLMSensoryModal(
-          '议价破裂！顾客拂袖而去',
-          `听到这个报价，对方眉头拧紧，一把夺回桌上的物件：“掌柜的，你这砍得太离谱了！我宁可拿到街角汉斯铁匠铺当废铁砸，也不卖你！”`,
-          `顾客头也不回地推门离去，门上的铜铃急促地响了一声。`
-        );
-        showToast('交易吹单', '出价过低，彻底耗尽了顾客的信任与耐心！', 'error');
-        cycleNextCustomer();
-      } else {
-        showToast('压价太狠', `对方强烈不满，声称最低也得 ${minAcceptable} 银币才肯松口！`, 'warning');
-      }
+    if (state.coins.silver < fairBuyPrice) {
+      showToast('现钱不足', `钱箱现银不够支付 ${fairBuyPrice} 银币收购款！`, 'error');
+      return;
     }
+
+    state.coins.silver -= fairBuyPrice;
+    AudioEngine.playCoin();
+    updateHUD();
+
+    state.inventoryItems.push({
+      id: `purchased_${Date.now()}`,
+      name: item.name,
+      type: 'material',
+      price: Math.round(calculatedFair * 1.3),
+      tier: item.tier || 2,
+      tierLabel: item.tierLabel || 'T2 熟工通货',
+      tags: item.tags.filter(t => t.revealed).map(t => t.name),
+      clarity: 70
+    });
+    renderCauldronMaterialsPicker();
+    renderShippingBinView();
+    renderMoonlighterShelf();
+
+    showLLMSensoryModal(
+      '典当成交！货款两讫',
+      `你递过 ${fairBuyPrice} 枚银币。对方查验过成色，利落收起钱袋：“痛快！掌柜是个懂行的实诚人，这件货归你了，回见！”`,
+      `【${item.name}】已收入背包仓库。您可随时将其摆上货架自定标价展售，或投入后院坩埚炼药！`
+    );
+    showToast('收购成功', `以公道价 ${fairBuyPrice} 银币收下【${item.name}】！`, 'success');
+    cycleNextCustomer();
+  }
+
+  // ==========================================================================
+  // 夜勤人式货架自由标价与 4 级表情反馈系统 (Moonlighter Shelf Engine)
+  // ==========================================================================
+  function renderMoonlighterShelf() {
+    const container = document.getElementById('moonlighter-shelf-slots');
+    if (!container) return;
+    container.innerHTML = '';
+
+    state.shelfSlots.forEach((slot, index) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'background:#1a130e;border:1px solid rgba(198,156,88,0.3);border-radius:6px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;';
+
+      if (slot.item) {
+        let emotionBadge = '';
+        if (slot.lastReaction === 'angry') {
+          emotionBadge = '<span style="font-size:1.15rem;" title="嫌太贵了！顾客大怒走人">😱 嫌贵</span>';
+        } else if (slot.lastReaction === 'reluctant') {
+          emotionBadge = '<span style="font-size:1.15rem;" title="稍微偏贵，勉强接受">😕 偏贵</span>';
+        } else if (slot.lastReaction === 'perfect') {
+          emotionBadge = '<span style="font-size:1.15rem;" title="完美公道价！顾客极其满意">😊 完美</span>';
+        } else if (slot.lastReaction === 'cheap') {
+          emotionBadge = '<span style="font-size:1.15rem;" title="太便宜了！像白捡一样">🤩 捡漏</span>';
+        }
+
+        row.innerHTML = `
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <strong style="font-size:0.8rem;color:#ffd875;">${slot.item.name}</strong>
+              ${emotionBadge}
+            </div>
+            <div style="font-size:0.68rem;color:var(--text-dim);margin-top:2px;">
+              基准成本：${slot.item.price} 银 · 当前标价：<span style="color:#ffd875;font-weight:700;">${slot.listedPrice}</span> 银
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <input type="number" min="1" max="999" value="${slot.listedPrice}" id="shelf-input-price-${slot.id}" style="width:50px;background:#130d09;border:1px solid var(--border-gold-dark);color:#ffd875;font-family:var(--font-sans);font-weight:700;font-size:0.85rem;padding:3px;border-radius:4px;text-align:right;">
+            <button class="btn-gold" style="width:auto;padding:3px 8px;font-size:0.72rem;" id="btn-shelf-adjust-${slot.id}">
+              调价
+            </button>
+            <button class="btn-secondary" style="width:auto;padding:3px 6px;font-size:0.72rem;margin:0;" id="btn-shelf-remove-${slot.id}">
+              下架
+            </button>
+          </div>
+        `;
+
+        const adjustBtn = row.querySelector(`#btn-shelf-adjust-${slot.id}`);
+        const removeBtn = row.querySelector(`#btn-shelf-remove-${slot.id}`);
+        const priceInput = row.querySelector(`#shelf-input-price-${slot.id}`);
+
+        if (adjustBtn && priceInput) {
+          adjustBtn.addEventListener('click', () => {
+            const newP = parseInt(priceInput.value, 10);
+            if (isNaN(newP) || newP <= 0) return;
+            slot.listedPrice = newP;
+            // 顾客看货测试反应
+            testCustomerReaction(slot);
+          });
+        }
+
+        if (removeBtn) {
+          removeBtn.addEventListener('click', () => {
+            state.inventoryItems.push(slot.item);
+            slot.item = null;
+            slot.listedPrice = 0;
+            slot.lastReaction = null;
+            AudioEngine.playTap();
+            showToast('已撤下货架', '商品已取回背包仓库。', 'normal');
+            renderMoonlighterShelf();
+            renderCauldronMaterialsPicker();
+          });
+        }
+      } else {
+        row.innerHTML = `
+          <div style="color:var(--text-dim);font-size:0.75rem;">
+            展架位 #${index + 1} · ［空位待上架］
+          </div>
+          <button class="btn-secondary" style="width:auto;padding:3px 10px;font-size:0.72rem;margin:0;" id="btn-shelf-add-${slot.id}">
+            + 放置
+          </button>
+        `;
+        const addBtn = row.querySelector(`#btn-shelf-add-${slot.id}`);
+        if (addBtn) {
+          addBtn.addEventListener('click', () => {
+            openShelfStockPicker(slot);
+          });
+        }
+      }
+      container.appendChild(row);
+    });
+  }
+
+  function testCustomerReaction(slot) {
+    if (!slot.item) return;
+    const p = slot.listedPrice;
+    const perfect = slot.item.perfectPrice || Math.round(slot.item.price * 1.25);
+    const min = slot.item.minPrice || Math.round(perfect * 0.7);
+    const max = slot.item.maxPrice || Math.round(perfect * 1.35);
+
+    if (p < min) {
+      slot.lastReaction = 'cheap';
+      AudioEngine.playCoin();
+      showToast('🤩 顾客狂喜捡漏！', `顾客像白捡一样飞速掏钱买走了【${slot.item.name}】！你标价太低，亏大了！`, 'warning');
+      sellShelfItem(slot);
+    } else if (p > max) {
+      slot.lastReaction = 'angry';
+      AudioEngine.playBreak();
+      showToast('😱 顾客大怒嫌贵！', `顾客看了一眼标价 ${p} 银币，骂骂咧咧摔下商品走人！`, 'error');
+      renderMoonlighterShelf();
+    } else if (p >= perfect - 2 && p <= perfect + 2) {
+      slot.lastReaction = 'perfect';
+      AudioEngine.playPerfectCombo();
+      showToast('😊 完美公道价达成！', `顾客极其满意地以 ${p} 银币全款买下【${slot.item.name}】！最佳物价带已记录！`, 'perfect-combo');
+      sellShelfItem(slot);
+    } else {
+      slot.lastReaction = 'reluctant';
+      AudioEngine.playCoin();
+      showToast('😕 顾客犹豫买下', `价格微高，顾客犹豫片刻后勉强付款 ${p} 银币带走了商品。`, 'normal');
+      sellShelfItem(slot);
+    }
+  }
+
+  function sellShelfItem(slot) {
+    state.coins.silver += slot.listedPrice;
+    updateHUD();
+    slot.item = null;
+    slot.listedPrice = 0;
+    setTimeout(() => {
+      renderMoonlighterShelf();
+    }, 600);
+  }
+
+  function openShelfStockPicker(targetSlot = null) {
+    if (state.inventoryItems.length === 0) {
+      showToast('背包空空', '仓库中暂无成药或宝物可上架，快去后院熬药或柜台收购吧！', 'warning');
+      return;
+    }
+
+    const availableSlot = targetSlot || state.shelfSlots.find(s => !s.item);
+    if (!availableSlot) {
+      showToast('展位已满', '柜台货架位已放满，请调价促成交易或撤下商品！', 'warning');
+      return;
+    }
+
+    // 从背包挑选一件上架
+    const item = state.inventoryItems.shift();
+    availableSlot.item = item;
+    availableSlot.listedPrice = Math.round(item.price * 1.25);
+    availableSlot.lastReaction = null;
+
+    AudioEngine.playTap();
+    showToast('商品已上架', `【${item.name}】已摆上展台，初始建议标价 ${availableSlot.listedPrice} 银币！`, 'success');
+    renderMoonlighterShelf();
+    renderCauldronMaterialsPicker();
   }
 
   // ==========================================================================
@@ -1026,13 +1185,26 @@
             <span style="font-size:0.72rem;color:#7c5f46;">时限：剩余 ${quest.daysLeft} 天</span>
             <div class="quest-reward-pill">赏金 ${quest.rewardSilver} 银币</div>
           </div>
-          <button class="btn-gold" style="width:auto;padding:7px 12px;font-size:0.78rem;" id="btn-deliver-quest-${quest.id}">
-            送货交付
-          </button>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-gold" style="width:auto;padding:6px 10px;font-size:0.76rem;" id="btn-deliver-minigame-${quest.id}">
+              🚴 骑车快送 (小游戏)
+            </button>
+            <button class="btn-secondary" style="width:auto;padding:6px 8px;font-size:0.74rem;margin:0;" id="btn-deliver-quest-${quest.id}">
+              直接交货
+            </button>
+          </div>
         </div>
       `;
 
+      const minigameBtn = card.querySelector(`#btn-deliver-minigame-${quest.id}`);
       const deliverBtn = card.querySelector(`#btn-deliver-quest-${quest.id}`);
+
+      if (minigameBtn) {
+        minigameBtn.addEventListener('click', () => {
+          startDeliveryMinigame(quest);
+        });
+      }
+
       if (deliverBtn) {
         deliverBtn.addEventListener('click', () => {
           AudioEngine.playCoin();
@@ -1626,6 +1798,215 @@
     cycleNextCustomer();
 
     showToast('次日清晨来临', `第 ${state.day} 天阳光洒在柜台上，商会马车送来昨夜出货结款 ${shippingSum} 银币！`, 'perfect-combo');
+  }
+
+  // ==========================================================================
+  // 小镇石板路急件送货平衡小游戏引擎 (Delivery Balance Minigame Engine)
+  // ==========================================================================
+  let deliveryGame = {
+    active: false,
+    quest: null,
+    distance: 0, // 0 ~ 100
+    speed: 0,    // 0 ~ 3
+    stability: 100, // 0 ~ 100
+    timeLeft: 15,
+    isPedaling: false,
+    obstacles: [],
+    timerId: null,
+    animFrameId: null
+  };
+
+  function startDeliveryMinigame(quest) {
+    deliveryGame.active = true;
+    deliveryGame.quest = quest;
+    deliveryGame.distance = 0;
+    deliveryGame.speed = 0;
+    deliveryGame.stability = 100;
+    deliveryGame.timeLeft = 15;
+    deliveryGame.isPedaling = false;
+    deliveryGame.obstacles = [
+      { x: 30, type: 'rock', label: '石子' },
+      { x: 60, type: 'puddle', label: '泥坑' },
+      { x: 85, type: 'cat', label: '小黑猫' }
+    ];
+
+    const targetName = document.getElementById('delivery-quest-target-name');
+    if (targetName) targetName.textContent = `${quest.clientName}的委托 · ${quest.title}`;
+
+    openModal('modal-delivery-minigame');
+    initDeliveryCanvas();
+
+    // 绑定踏板事件 (支持鼠标按住与手机触摸按住)
+    const pedalBtn = document.getElementById('btn-pedal-accelerate');
+    const restartBtn = document.getElementById('btn-restart-delivery');
+
+    const pressStart = (e) => {
+      e.preventDefault();
+      deliveryGame.isPedaling = true;
+      pedalBtn.style.transform = 'scale(0.96)';
+      pedalBtn.style.background = '#ffd875';
+    };
+    const pressEnd = (e) => {
+      e.preventDefault();
+      deliveryGame.isPedaling = false;
+      pedalBtn.style.transform = 'scale(1)';
+      pedalBtn.style.background = '';
+    };
+
+    pedalBtn.onmousedown = pressStart;
+    pedalBtn.onmouseup = pressEnd;
+    pedalBtn.ontouchstart = pressStart;
+    pedalBtn.ontouchend = pressEnd;
+
+    if (restartBtn) {
+      restartBtn.onclick = () => startDeliveryMinigame(quest);
+    }
+
+    if (deliveryGame.timerId) clearInterval(deliveryGame.timerId);
+    deliveryGame.timerId = setInterval(() => {
+      if (!deliveryGame.active) return;
+      deliveryGame.timeLeft--;
+      const timerEl = document.getElementById('delivery-timer-val');
+      if (timerEl) timerEl.textContent = `${deliveryGame.timeLeft} 秒`;
+
+      if (deliveryGame.timeLeft <= 0) {
+        endDeliveryGame(false, '超时未达');
+      }
+    }, 1000);
+  }
+
+  function initDeliveryCanvas() {
+    const canvas = document.getElementById('delivery-road-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.parentElement.clientWidth || 580;
+    canvas.height = 140;
+
+    function loop() {
+      if (!deliveryGame.active) return;
+
+      // 物理速度更新
+      if (deliveryGame.isPedaling) {
+        deliveryGame.speed = Math.min(2.5, deliveryGame.speed + 0.08);
+      } else {
+        deliveryGame.speed = Math.max(0, deliveryGame.speed - 0.05);
+      }
+
+      deliveryGame.distance += deliveryGame.speed * 0.45;
+
+      // 速度过快导致药水颠簸
+      if (deliveryGame.speed > 1.8) {
+        deliveryGame.stability = Math.max(0, deliveryGame.stability - (deliveryGame.speed - 1.8) * 0.8);
+      }
+
+      // 遇到障碍物判定
+      deliveryGame.obstacles.forEach(obs => {
+        if (Math.abs(deliveryGame.distance - obs.x) < 1.5 && deliveryGame.speed > 0.8) {
+          deliveryGame.stability = Math.max(0, deliveryGame.stability - 8);
+          AudioEngine.playBreak();
+          showToast('单车颠簸！', `撞上${obs.label}，药箱猛烈晃动！`, 'warning');
+        }
+      });
+
+      // 更新界面指示
+      const distEl = document.getElementById('delivery-distance-val');
+      const stabVal = document.getElementById('delivery-stability-val');
+      const stabBar = document.getElementById('delivery-stability-bar');
+
+      if (distEl) distEl.textContent = `${Math.min(100, Math.round(deliveryGame.distance))} / 100 米`;
+      if (stabVal) {
+        stabVal.textContent = `${Math.round(deliveryGame.stability)}% (${deliveryGame.stability > 70 ? '完好' : deliveryGame.stability > 30 ? '部分泼洒' : '严重受损'})`;
+      }
+      if (stabBar) {
+        stabBar.style.width = `${deliveryGame.stability}%`;
+        stabBar.style.background = deliveryGame.stability > 60 ? '#2f855a' : deliveryGame.stability > 30 ? '#d4af37' : '#b93c3c';
+      }
+
+      // 绘制石板路跑道
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 石板路地面
+      ctx.fillStyle = '#1c1510';
+      ctx.fillRect(0, 90, canvas.width, 50);
+      ctx.strokeStyle = '#422f20';
+      ctx.lineWidth = 2;
+      for (let x = (100 - (deliveryGame.distance * 10)) % 40; x < canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 90);
+        ctx.lineTo(x, 140);
+        ctx.stroke();
+      }
+
+      // 终点线
+      const finishX = (100 - deliveryGame.distance) * (canvas.width / 100) + 60;
+      if (finishX < canvas.width && finishX > 0) {
+        ctx.fillStyle = '#d4af37';
+        ctx.fillRect(finishX, 40, 8, 100);
+      }
+
+      // 障碍物
+      deliveryGame.obstacles.forEach(obs => {
+        const obsScreenX = (obs.x - deliveryGame.distance) * (canvas.width / 100) + 60;
+        if (obsScreenX > 0 && obsScreenX < canvas.width) {
+          ctx.fillStyle = obs.type === 'cat' ? '#d4af37' : '#6e522b';
+          ctx.fillRect(obsScreenX, 82, 14, 10);
+        }
+      });
+
+      // 掌柜单车
+      const bikeX = 60;
+      const bikeY = 70 + (Math.sin(deliveryGame.distance * 0.8) * deliveryGame.speed * 1.5);
+      ctx.fillStyle = '#ffd875';
+      ctx.beginPath();
+      ctx.arc(bikeX - 10, bikeY + 18, 8, 0, Math.PI * 2);
+      ctx.arc(bikeX + 12, bikeY + 18, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#f0e6d6';
+      ctx.fillRect(bikeX - 6, bikeY, 14, 16);
+
+      // 达到终点
+      if (deliveryGame.distance >= 100) {
+        endDeliveryGame(true);
+        return;
+      }
+
+      deliveryGame.animFrameId = requestAnimationFrame(loop);
+    }
+
+    cancelAnimationFrame(deliveryGame.animFrameId);
+    deliveryGame.animFrameId = requestAnimationFrame(loop);
+  }
+
+  function endDeliveryGame(isSuccess, reason = '') {
+    deliveryGame.active = false;
+    clearInterval(deliveryGame.timerId);
+    cancelAnimationFrame(deliveryGame.animFrameId);
+
+    const quest = deliveryGame.quest;
+    closeModal('modal-delivery-minigame');
+
+    if (isSuccess) {
+      let finalReward = quest.rewardSilver;
+      let tip = 0;
+      if (deliveryGame.stability >= 80) {
+        tip = Math.round(quest.rewardSilver * 0.35); // 完好送达高额小费 +35%
+        finalReward += tip;
+        AudioEngine.playPerfectCombo();
+        showToast('神速完好送达！', `药水平稳无瑕！【${quest.clientName}】喜出望外，额外打赏跑腿小费 ${tip} 银币！`, 'perfect-combo');
+      } else {
+        AudioEngine.playCoin();
+        showToast('送货抵达', `药水略有颠簸泼洒，扣除少许后顺利结算赏金 ${finalReward} 银币！`, 'normal');
+      }
+
+      state.coins.silver += finalReward;
+      quest.clientHearts = Math.min(5, quest.clientHearts + (tip > 0 ? 2 : 1));
+      updateHUD();
+      initNoticeBoardView();
+    } else {
+      AudioEngine.playBreak();
+      showToast('快送失败', `送货途中因${reason}，未能按时交付！`, 'error');
+    }
   }
 
   // ==========================================================================

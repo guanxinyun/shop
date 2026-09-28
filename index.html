@@ -414,24 +414,44 @@
             </button>
           </div>
 
+          <!-- 柜台出价议价面板 -> 重构为：夜勤人式前厅货架展售台 (Moonlighter Style Shelf) -->
           <div class="bargain-panel wood-panel">
             <div class="panel-header" style="background:transparent;border-bottom:1px solid rgba(198,156,88,0.2);">
-              <h3 style="font-size:0.86rem;">柜台议价 · 落子无悔</h3>
-              <span style="font-size:0.72rem;color:var(--text-dim);">消耗 1 耐心</span>
+              <h3 style="font-size:0.86rem;display:flex;align-items:center;gap:6px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                夜勤人式货架展售台
+              </h3>
+              <span style="font-size:0.7rem;color:#ffd875;">自由标价 · 表情反馈</span>
             </div>
-            <div class="panel-body" style="padding:12px;">
-              <p style="font-size:0.75rem;color:var(--text-dim);">
-                开价后立即进入心理判定，绝无后悔追加鉴定的余地：
+            <div class="panel-body" style="padding:12px;display:flex;flex-direction:column;gap:10px;">
+              <p style="font-size:0.75rem;color:var(--text-dim);line-height:1.5;">
+                摆上背包里的成药或宝物并贴上标价。顾客看货后会冒出 4 级表情反应（😱嫌贵 / 😕偏贵 / 😊完美 / 🤩捡漏）并记入物价手札：
               </p>
-              <div class="bargain-inputs">
-                <input type="number" class="input-wood" id="input-offer-silver" value="12" min="1" max="999">
-                <div class="currency-symbol">银币</div>
+
+              <!-- 4个货架展示位 -->
+              <div id="moonlighter-shelf-slots" style="display:flex;flex-direction:column;gap:8px;">
+                <!-- 由 JS 渲染货架位 -->
               </div>
-              <button class="btn-gold" id="btn-submit-offer">
-                正式开价买入 (成交判定)
+
+              <!-- 快速上架按钮 -->
+              <button class="btn-gold" id="btn-open-shelf-stock" style="padding:8px;font-size:0.82rem;">
+                + 从背包选择商品上架展售
               </button>
-              <button class="btn-secondary" id="btn-pass-customer">
-                婉拒不收 · 送客离店
+            </div>
+          </div>
+
+          <!-- 顾客典当收购面板 (极简一口价收下/婉拒，彻底告别繁琐猜数字议价) -->
+          <div class="wood-panel" style="padding:12px;background:#18110b;border-color:rgba(198,156,88,0.2);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <strong style="font-size:0.8rem;color:#ffd875;">典当收购谈判：</strong>
+              <span style="font-size:0.7rem;color:var(--text-dim);">看破瑕疵自动压价</span>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn-gold" id="btn-quick-buy-item" style="flex:2;padding:7px;font-size:0.78rem;">
+                以公道价一口收购 (<span id="btn-buy-price-val">12</span> 银)
+              </button>
+              <button class="btn-secondary" id="btn-pass-customer" style="flex:1;margin:0;padding:7px;font-size:0.78rem;">
+                婉拒送客
               </button>
             </div>
           </div>
@@ -905,6 +925,57 @@
         <button class="btn-gold" id="btn-confirm-next-day" style="font-size:0.95rem;padding:10px;">
           吹熄油灯 · 进入次日清晨
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       模态框六：小镇石板路急件送货平衡小游戏 (Delivery Balance Minigame Modal)
+       ========================================================================== -->
+  <div class="drawer-modal-overlay" id="modal-delivery-minigame">
+    <div class="drawer-window" style="max-width:620px;">
+      <div class="panel-header" style="background:#1b130e;border-bottom:1px solid var(--border-gold);">
+        <h3 style="color:#ffd875;font-size:0.98rem;display:flex;align-items:center;gap:8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+          小镇石板路 · 急件平衡快送
+        </h3>
+        <button class="drawer-close-btn" data-close-modal="modal-delivery-minigame">✕</button>
+      </div>
+      <div class="drawer-body-scroll" style="display:flex;flex-direction:column;gap:14px;padding:18px;">
+        <div style="background:#17110c;border:1px solid rgba(198,156,88,0.25);border-radius:8px;padding:10px 14px;font-size:0.78rem;color:#dfd2c0;line-height:1.6;">
+          🚴 <strong>送货委托：</strong><span id="delivery-quest-target-name" style="color:#ffd875;font-weight:700;">玛尔塔大娘的急用骨膏</span><br>
+          骑上工坊单车穿过小镇石板路！<strong>按住屏幕踩踏加速，松开刹车减速</strong>，避开泥坑与石子颠簸，保持药水完好度获取额外跑腿小费！
+        </div>
+
+        <!-- 药水颠簸稳定度指示条 (Fluid Stability) -->
+        <div style="background:#221812;border:1px solid rgba(198,156,88,0.3);border-radius:8px;padding:10px 14px;">
+          <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:6px;">
+            <span>药箱平衡稳定度 (颠簸过猛将泼洒)：</span>
+            <strong id="delivery-stability-val" style="color:#2f855a;font-family:var(--font-sans);">100% (完好)</strong>
+          </div>
+          <div style="height:10px;background:#140e0a;border-radius:5px;overflow:hidden;border:1px solid rgba(0,0,0,0.5);">
+            <div id="delivery-stability-bar" style="height:100%;width:100%;background:linear-gradient(90deg, #2f855a, #d4af37);transition:width 0.15s ease;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text-dim);margin-top:4px;">
+            <span>路程进度：<strong id="delivery-distance-val" style="color:#ffd875;">0 / 100 米</strong></span>
+            <span>倒计时：<strong id="delivery-timer-val" style="color:#ffd875;">15 秒</strong></span>
+          </div>
+        </div>
+
+        <!-- 送货石板路 Canvas 动画跑道 -->
+        <div style="width:100%;height:140px;background:#100b08;border:2px solid var(--border-gold-dark);border-radius:8px;position:relative;overflow:hidden;">
+          <canvas id="delivery-road-canvas" style="width:100%;height:100%;display:block;"></canvas>
+        </div>
+
+        <!-- 控制踏板按钮 -->
+        <div style="display:flex;gap:10px;">
+          <button class="btn-gold" id="btn-pedal-accelerate" style="flex:2;padding:14px;font-size:1.05rem;user-select:none;-webkit-user-select:none;">
+            🚴 按住单车踩踏加速 (松开减速刹车)
+          </button>
+          <button class="btn-secondary" id="btn-restart-delivery" style="flex:1;margin:0;padding:14px;font-size:0.82rem;">
+            重骑出发
+          </button>
+        </div>
       </div>
     </div>
   </div>
