@@ -2070,6 +2070,224 @@
     });
   }
 
+  // ==========================================================================
+  // 十、创作者工坊 / 编辑器模式引擎 (Atelier Studio Editor Engine)
+  // ==========================================================================
+  function initEditorStudioView() {
+    // 1. 子选项卡切换 (物品 / 配方 / 委托)
+    const tabItem = document.getElementById('editor-tab-item');
+    const tabRecipe = document.getElementById('editor-tab-recipe');
+    const tabQuest = document.getElementById('editor-tab-quest');
+    const panelItem = document.getElementById('editor-panel-item');
+    const panelRecipe = document.getElementById('editor-panel-recipe');
+    const panelQuest = document.getElementById('editor-panel-quest');
+
+    const switchEditorTab = (tab, panel) => {
+      [tabItem, tabRecipe, tabQuest].forEach(t => t.classList.remove('active'));
+      [panelItem, panelRecipe, panelQuest].forEach(p => p.style.display = 'none');
+      tab.classList.add('active');
+      panel.style.display = 'block';
+      AudioEngine.playTap();
+    };
+
+    if (tabItem) tabItem.addEventListener('click', () => switchEditorTab(tabItem, panelItem));
+    if (tabRecipe) tabRecipe.addEventListener('click', () => switchEditorTab(tabRecipe, panelRecipe));
+    if (tabQuest) tabQuest.addEventListener('click', () => switchEditorTab(tabQuest, panelQuest));
+
+    // 2. 物品编辑器即时预览与保存
+    const nameInput = document.getElementById('edit-item-name');
+    const catSelect = document.getElementById('edit-item-category');
+    const tierSelect = document.getElementById('edit-item-tier');
+    const symptomInput = document.getElementById('edit-item-symptom');
+    const saveItemBtn = document.getElementById('btn-save-custom-item');
+
+    const updateItemPreview = () => {
+      const pName = document.getElementById('preview-item-name');
+      const pCat = document.getElementById('preview-item-cat');
+      const pSym = document.getElementById('preview-item-symptom');
+      const pPrice = document.getElementById('preview-item-price');
+
+      const tVal = parseInt(tierSelect.value, 10);
+      const tierGuide = window.ATELIER_DATA.tierPriceGuide.material[tVal];
+      const avgPrice = Math.round((tierGuide.min + tierGuide.max) / 2);
+
+      if (pName) pName.textContent = nameInput.value || '未命名藏品';
+      if (pCat) pCat.textContent = `${tierGuide.label} · ${catSelect.value}`;
+      if (pSym) pSym.textContent = symptomInput.value || '暂无外观表征描写。';
+      if (pPrice) pPrice.textContent = `脚本计算区间：${tierGuide.min}~${tierGuide.max} 银 (均价约 ${avgPrice} 银)`;
+    };
+
+    [nameInput, catSelect, tierSelect, symptomInput].forEach(el => {
+      if (el) el.addEventListener('input', updateItemPreview);
+    });
+
+    if (saveItemBtn) {
+      saveItemBtn.addEventListener('click', () => {
+        const tVal = parseInt(tierSelect.value, 10);
+        const tierGuide = window.ATELIER_DATA.tierPriceGuide.material[tVal];
+        const baseP = Math.floor(Math.random() * (tierGuide.max - tierGuide.min + 1)) + tierGuide.min;
+        const tagSelect = document.getElementById('edit-item-tag-select');
+        const methodSelect = document.getElementById('edit-item-method-select');
+
+        const newItem = {
+          id: `custom_item_${Date.now()}`,
+          name: nameInput.value || '自定义奇巧藏品',
+          category: catSelect.value,
+          tier: tVal,
+          tierLabel: tierGuide.label,
+          basePriceSilver: baseP,
+          declaredPriceSilver: Math.round(baseP * 1.35),
+          symptomText: symptomInput.value,
+          hiddenTotalCount: 1,
+          tags: [
+            { id: 'custom_t1', name: tagSelect.value, level: tVal >= 4 ? 4 : 2, revealed: false, validMethod: methodSelect.value, mod: +0.40, type: tVal >= 4 ? 'rare' : 'positive' }
+          ],
+          journalEntries: [
+            { isCorrect: true, title: `《工匠私撰·${tagSelect.value}》`, text: `以此法检验：【${window.ATELIER_DATA.workshopMethods.find(m => m.id === methodSelect.value).name}】必见其真章。` }
+          ]
+        };
+
+        // 存入玩家背包仓库
+        state.inventoryItems.push({
+          id: newItem.id,
+          name: newItem.name,
+          type: 'material',
+          price: baseP,
+          tier: tVal,
+          tierLabel: tierGuide.label,
+          tags: [tagSelect.value],
+          clarity: 85
+        });
+
+        renderCauldronMaterialsPicker();
+        renderShippingBinView();
+        renderMoonlighterShelf();
+        AudioEngine.playPerfectCombo();
+        showToast('自定义物品注入成功！', `【${newItem.name}】已成功写入游戏全局数据库并送达背包仓库！`, 'perfect-combo');
+      });
+    }
+
+    // 3. 配方编辑器保存
+    const saveRecipeBtn = document.getElementById('btn-save-custom-recipe');
+    if (saveRecipeBtn) {
+      saveRecipeBtn.addEventListener('click', () => {
+        const rName = document.getElementById('edit-recipe-name').value || '自创新方';
+        const rDesc = document.getElementById('edit-recipe-desc').value || '工坊私传秘制。';
+        const h1 = document.getElementById('edit-branch-a-hit1').value;
+        const h2 = document.getElementById('edit-branch-a-hit2').value;
+        const h3 = document.getElementById('edit-branch-a-hit3').value;
+
+        const newRecipe = {
+          id: `custom_rec_${Date.now()}`,
+          name: rName,
+          tier: '掌柜私传',
+          desc: rDesc,
+          targetRanges: { calor: [-15, 15], frigor: [10, 35], lene: [10, 30], minClarity: 50 },
+          branches: [
+            {
+              branchId: 'civilian',
+              name: '市井自创派',
+              audience: '全镇居民',
+              combo: [h1, h2, h3],
+              bonusTags: ['清甜不苦', '长久保鲜'],
+              bonusClarity: 30,
+              unlocked: true,
+              tip: `自创工法连携：【${h1}】➜【${h2}】➜【${h3}】。`
+            }
+          ]
+        };
+
+        window.ATELIER_DATA.recipes.push(newRecipe);
+        state.currentRecipeId = newRecipe.id;
+        renderRecipeCardsList();
+        renderCurrentRecipeBranchDetails();
+        AudioEngine.playPerfectCombo();
+        showToast('自定义配方注入成功！', `【${rName}】已正式收录进后院炼金秘药谱册，可直接开炉！`, 'perfect-combo');
+      });
+    }
+
+    // 4. 布告栏委托保存
+    const saveQuestBtn = document.getElementById('btn-save-custom-quest');
+    if (saveQuestBtn) {
+      saveQuestBtn.addEventListener('click', () => {
+        const qClient = document.getElementById('edit-quest-client').value || '小镇旅人';
+        const qTitle = document.getElementById('edit-quest-title').value || '紧急搜求';
+        const qDesc = document.getElementById('edit-quest-desc').value || '请尽快送达！';
+        const qDays = parseInt(document.getElementById('edit-quest-days').value, 10) || 3;
+        const qBounty = parseInt(document.getElementById('edit-quest-bounty').value, 10) || 30;
+
+        const newQuest = {
+          id: `custom_q_${Date.now()}`,
+          clientName: qClient,
+          clientHearts: 1,
+          daysLeft: qDays,
+          title: qTitle,
+          desc: qDesc,
+          reqDesc: '自创特制品需求：澄澈度 ≥ 60，具备优良物性',
+          rewardSilver: qBounty,
+          rewardGift: '精致手信礼盒 x1',
+          status: 'available'
+        };
+
+        window.ATELIER_DATA.noticeQuests.unshift(newQuest);
+        initNoticeBoardView();
+        AudioEngine.playCoin();
+        showToast('新委托钉上布告栏！', `【${qClient}】的字条已钉在喷泉广场布告牌上，赏金 ${qBounty} 银！`, 'success');
+      });
+    }
+
+    // 5. DLC 模组导入导出
+    const exportModBtn = document.getElementById('btn-export-mod-pack');
+    const importModInput = document.getElementById('input-import-mod-pack');
+
+    if (exportModBtn) {
+      exportModBtn.addEventListener('click', () => {
+        const modPack = {
+          modName: '我的工坊扩充DLC',
+          exportTime: new Date().toLocaleString(),
+          customRecipes: window.ATELIER_DATA.recipes.filter(r => r.id.startsWith('custom_')),
+          customQuests: window.ATELIER_DATA.noticeQuests.filter(q => q.id.startsWith('custom_')),
+          customItems: state.inventoryItems.filter(i => i.id.startsWith('custom_'))
+        };
+        const blob = new Blob([JSON.stringify(modPack, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `工坊物语_创作者DLC模组_${Date.now()}.atelier-mod.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        AudioEngine.playCoin();
+        showToast('DLC 模组包已导出', '已生成独立创作者扩展包文件！', 'perfect-combo');
+      });
+    }
+
+    if (importModInput) {
+      importModInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const mod = JSON.parse(evt.target.result);
+            if (mod.customRecipes) window.ATELIER_DATA.recipes.push(...mod.customRecipes);
+            if (mod.customQuests) window.ATELIER_DATA.noticeQuests.unshift(...mod.customQuests);
+            if (mod.customItems) state.inventoryItems.push(...mod.customItems);
+
+            renderRecipeCardsList();
+            initNoticeBoardView();
+            renderCauldronMaterialsPicker();
+            renderShippingBinView();
+            AudioEngine.playPerfectCombo();
+            showToast('DLC 模组载入成功！', `成功挂载外部创作者扩展模组，所有新内容已实时就绪！`, 'perfect-combo');
+          } catch (err) {
+            showToast('模组格式无效', '解析模组 JSON 数据失败！', 'error');
+          }
+        };
+        reader.readAsText(file);
+      });
+    }
+  }
+
   // 页面加载入口
   document.addEventListener('DOMContentLoaded', () => {
     initCoverCanvas();
@@ -2083,6 +2301,7 @@
     initShowcaseView();
     initAuditView();
     initDrawersAndModals();
+    initEditorStudioView();
   });
 
 })();

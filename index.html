@@ -159,6 +159,10 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <span>打烊清算</span>
       </button>
+      <button class="nav-tab-btn" data-view="editor-view" id="nav-btn-editor" style="color:#ffd875;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span>创作者工坊(编辑器)</span>
+      </button>
       <button class="nav-tab-btn" data-view="audit-view" id="nav-btn-audit">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <span>行会审查</span>
@@ -314,6 +318,28 @@
           <div class="hub-card-footer">
             <span>执事维斯佩拉审核中</span>
             <span class="hub-card-enter-btn">偿还借据 →</span>
+          </div>
+        </div>
+
+        <!-- 创作者工坊编辑器卡片 -->
+        <div class="hub-card" data-jump="editor-view" id="hub-card-editor" style="border-color:rgba(212,175,55,0.4);">
+          <div>
+            <div class="hub-card-header">
+              <span class="hub-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                创作者工坊 (编辑器)
+              </span>
+              <span class="hub-card-badge" style="color:#ffd875;border-color:rgba(212,175,55,0.5);">DLC 扩展</span>
+            </div>
+            <div class="hub-card-preview" style="margin-top:10px;">
+              · 自创物品与藏品 (阶位/标签/表征/真伪手札)<br>
+              · 自创一图三派配方 (三连击Combo连招自定义)<br>
+              · 创作者DLC模组一键导出与外部挂载导入
+            </div>
+          </div>
+          <div class="hub-card-footer">
+            <span>免写代码 · 自由拓展</span>
+            <span class="hub-card-enter-btn">进入工坊 →</span>
           </div>
         </div>
       </div>
@@ -780,6 +806,209 @@
           <button class="btn-gold" id="btn-pay-audit-silver" style="font-size:0.98rem;padding:11px;">
             全款偿还第一期借据 (支付 50 银币)
           </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         视图七：创作者工坊 / 编辑器模式 (Atelier Studio / Editor View)
+         ======================================================================== -->
+    <section class="view-section" id="editor-view">
+      <div class="wood-panel" style="padding:22px;margin-bottom:20px;">
+        <div class="panel-header" style="background:transparent;border-bottom:1px solid rgba(198,156,88,0.25);padding:0 0 12px 0;">
+          <h2 style="font-size:1.15rem;color:#ffd875;display:flex;align-items:center;gap:8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            创作者工坊 · 内容生态编辑器 (Atelier Studio)
+          </h2>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-gold" id="btn-export-mod-pack" style="width:auto;padding:5px 12px;font-size:0.75rem;">
+              📥 导出创作者DLC模组 (.atelier-mod.json)
+            </button>
+            <label class="btn-secondary" style="width:auto;padding:5px 12px;font-size:0.75rem;margin:0;cursor:pointer;">
+              📤 导入外部模组
+              <input type="file" id="input-import-mod-pack" accept=".json" style="display:none;">
+            </label>
+          </div>
+        </div>
+
+        <!-- 编辑器子模块导航卡 -->
+        <div style="display:flex;gap:8px;margin:14px 0;border-bottom:1px solid rgba(198,156,88,0.2);padding-bottom:10px;">
+          <button class="nav-tab-btn active" id="editor-tab-item" style="padding:6px 12px;font-size:0.82rem;">
+            📦 自定义物品与藏品
+          </button>
+          <button class="nav-tab-btn" id="editor-tab-recipe" style="padding:6px 12px;font-size:0.82rem;">
+            📜 自定义一图三派配方
+          </button>
+          <button class="nav-tab-btn" id="editor-tab-quest" style="padding:6px 12px;font-size:0.82rem;">
+            📋 自定义小镇布告委托
+          </button>
+        </div>
+
+        <!-- 1. 物品编辑器面板 -->
+        <div id="editor-panel-item" class="editor-subpanel">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+            <!-- 左侧表单 -->
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">物品名称：</label>
+                <input type="text" class="input-wood" id="edit-item-name" value="夜光结晶风铃" style="width:100%;text-align:left;font-size:0.9rem;">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                  <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">物产大类：</label>
+                  <select class="input-wood" id="edit-item-category" style="width:100%;font-size:0.82rem;padding:6px;">
+                    <option value="器皿与用具">器皿与用具</option>
+                    <option value="矿石与贵金">矿石与贵金</option>
+                    <option value="草药与生息">草药与生息</option>
+                    <option value="兽骨与毛羽">兽骨与毛羽</option>
+                    <option value="饰件与轻法具">饰件与轻法具</option>
+                    <option value="纸帛与古卷">纸帛与古卷</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">阶位等级：</label>
+                  <select class="input-wood" id="edit-item-tier" style="width:100%;font-size:0.82rem;padding:6px;">
+                    <option value="1">T1 见习寻常物 (2~5银)</option>
+                    <option value="2">T2 熟工通货 (6~12银)</option>
+                    <option value="3" selected>T3 行家里手 (14~25银)</option>
+                    <option value="4">T4 名匠珍品 (30~55银)</option>
+                    <option value="5">T5 宗匠孤品 (65~120银)</option>
+                    <option value="6">T6 天工绝造 (150~280银)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">感官表征描述 (供玩家在柜台探查破绽)：</label>
+                <textarea class="input-wood" id="edit-item-symptom" rows="3" style="width:100%;text-align:left;font-size:0.82rem;line-height:1.5;">轻晃时发出细密幽雅的脆响，但底托金属表面泛着一层极淡的灰绿铜锈，握久了指尖略有温热微麻。</textarea>
+              </div>
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">附加暗藏特质 Tag：</label>
+                <div style="display:flex;gap:6px;">
+                  <select class="input-wood" id="edit-item-tag-select" style="flex:2;font-size:0.82rem;padding:6px;">
+                    <option value="古代避风微刻纹">★ Lv.4 古代避风微刻纹 (优点 +65%)</option>
+                    <option value="深层宿存温热">★ Lv.3 深层宿存温热 (优点 +40%)</option>
+                    <option value="内部冷隔暗伤">⚠️ Lv.3 内部冷隔暗伤 (瑕疵 -35%)</option>
+                    <option value="内部细微磨损滑牙">⚠️ Lv.2 内部细微磨损滑牙 (瑕疵 -25%)</option>
+                    <option value="夜间微光">★ Lv.4 夜间微光 (特异 +50%)</option>
+                  </select>
+                  <select class="input-wood" id="edit-item-method-select" style="flex:1;font-size:0.82rem;padding:6px;">
+                    <option value="lamp_inspect">聚光照纹</option>
+                    <option value="acoustic_tap">骨锤轻敲</option>
+                    <option value="gentle_heat">微火微温</option>
+                    <option value="lens_inspect">透镜细查</option>
+                    <option value="mana_pulse">魔力轻注</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn-gold" id="btn-save-custom-item" style="margin-top:6px;font-size:0.88rem;padding:9px;">
+                + 保存并实时注入游戏货物库
+              </button>
+            </div>
+
+            <!-- 右侧即时预览 -->
+            <div style="background:#17110c;border:1px solid var(--border-gold-dark);border-radius:8px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div>
+                <span style="font-size:0.72rem;color:var(--border-gold-glow);text-transform:uppercase;">即时预览卡 (WYSIWYG)</span>
+                <h3 id="preview-item-name" style="color:#ffd875;font-size:1.15rem;margin:6px 0;">夜光结晶风铃</h3>
+                <span class="item-category-chip" id="preview-item-cat">T3 行家里手 · 器皿与用具</span>
+                <div class="sensory-desc-box" id="preview-item-symptom" style="margin:12px 0;">
+                  轻晃时发出细密幽雅的脆响，但底托金属表面泛着一层极淡的灰绿铜锈，握久了指尖略有温热微麻。
+                </div>
+                <div style="font-size:0.76rem;color:var(--text-dim);">
+                  脚本计算预估基准价：<strong style="color:#ffd875;" id="preview-item-price">约 22 银币</strong>
+                </div>
+              </div>
+              <div style="border-top:1px dashed rgba(198,156,88,0.25);padding-top:10px;font-size:0.74rem;color:#9ae6b4;">
+                ✓ 注入后将立即加入顾客典当随机生成库与背包仓库
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 配方三派Combo编辑器面板 (默认隐藏，切换时激活) -->
+        <div id="editor-panel-recipe" class="editor-subpanel" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">配方名称：</label>
+                <input type="text" class="input-wood" id="edit-recipe-name" value="醒神雪露精油" style="width:100%;text-align:left;font-size:0.9rem;">
+              </div>
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">配方描述：</label>
+                <input type="text" class="input-wood" id="edit-recipe-desc" value="雪山旅者驱散疲劳的透凉精油，三派手法成色各异。" style="width:100%;text-align:left;font-size:0.82rem;">
+              </div>
+              <div style="background:#17110c;border:1px solid rgba(198,156,88,0.2);border-radius:6px;padding:10px;">
+                <strong style="color:#ffd875;font-size:0.8rem;">【分支A：市井温和派】3 连击连招：</strong>
+                <div style="display:flex;gap:6px;margin-top:6px;">
+                  <select class="input-wood" id="edit-branch-a-hit1" style="flex:1;font-size:0.78rem;padding:4px;">
+                    <option value="simmer" selected>温煨</option><option value="boil">强沸</option><option value="stir">研搅</option><option value="filter">析滤</option><option value="extract">萃滴</option>
+                  </select>
+                  <select class="input-wood" id="edit-branch-a-hit2" style="flex:1;font-size:0.78rem;padding:4px;">
+                    <option value="simmer">温煨</option><option value="boil">强沸</option><option value="stir">研搅</option><option value="filter" selected>析滤</option><option value="extract">萃滴</option>
+                  </select>
+                  <select class="input-wood" id="edit-branch-a-hit3" style="flex:1;font-size:0.78rem;padding:4px;">
+                    <option value="simmer">温煨</option><option value="boil">强沸</option><option value="stir">研搅</option><option value="filter">析滤</option><option value="extract" selected>萃滴</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn-gold" id="btn-save-custom-recipe" style="font-size:0.88rem;padding:9px;">
+                + 保存并注入后院秘药谱册
+              </button>
+            </div>
+            <div style="background:#17110c;border:1px solid var(--border-gold-dark);border-radius:8px;padding:16px;">
+              <span style="font-size:0.72rem;color:var(--border-gold-glow);">谱册即时呈现</span>
+              <h3 id="preview-recipe-title" style="color:#ffd875;font-size:1.1rem;margin:6px 0;">醒神雪露精油</h3>
+              <p id="preview-recipe-desc" style="font-size:0.78rem;color:#dfd2c0;line-height:1.5;">雪山旅者驱散疲劳的透凉精油，三派手法成色各异。</p>
+              <div style="margin-top:12px;background:#241a12;border-radius:6px;padding:10px;font-size:0.76rem;color:#c0ab92;line-height:1.6;">
+                ★ 连击链：【温煨】 ➜ 【析滤】 ➜ 【萃滴】<br>
+                ★ 激发词缀：【清甜不苦】、【舒缓安眠】<br>
+                ★ 目标客群：小镇居民 / 孩童 / 母亲
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 布告栏委托编辑器面板 (默认隐藏) -->
+        <div id="editor-panel-quest" class="editor-subpanel" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">委托人称谓：</label>
+                <input type="text" class="input-wood" id="edit-quest-client" value="旅行学者艾文" style="width:100%;text-align:left;font-size:0.9rem;">
+              </div>
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">便签标题：</label>
+                <input type="text" class="input-wood" id="edit-quest-title" value="急需野外探穴耐火油" style="width:100%;text-align:left;font-size:0.9rem;">
+              </div>
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">委托留言说明：</label>
+                <textarea class="input-wood" id="edit-quest-desc" rows="2" style="width:100%;text-align:left;font-size:0.82rem;">后天清晨要随队进入溶洞，急需防潮耐热的草药软膏，酬金从优！</textarea>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                  <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">时限 (天)：</label>
+                  <input type="number" class="input-wood" id="edit-quest-days" value="3" min="1" max="5" style="width:100%;">
+                </div>
+                <div>
+                  <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">赏金 (银币)：</label>
+                  <input type="number" class="input-wood" id="edit-quest-bounty" value="35" min="1" max="999" style="width:100%;">
+                </div>
+              </div>
+              <button class="btn-gold" id="btn-save-custom-quest" style="font-size:0.88rem;padding:9px;">
+                + 钉上小镇中心布告栏
+              </button>
+            </div>
+            <div style="background:var(--bg-parchment);color:var(--text-dark);border:1px solid #dcd0bc;border-radius:4px;padding:16px;box-shadow:0 6px 16px rgba(0,0,0,0.3);position:relative;">
+              <div class="brass-pushpin"></div>
+              <strong id="preview-quest-client" style="color:#2a1c12;font-size:0.88rem;">旅行学者艾文</strong>
+              <div id="preview-quest-title" style="font-size:1rem;font-weight:700;color:#2b1c11;margin:6px 0;">急需野外探穴耐火油</div>
+              <p id="preview-quest-desc" style="font-size:0.8rem;color:#4f3d2d;line-height:1.5;">“后天清晨要随队进入溶洞，急需防潮耐热的草药软膏，酬金从优！”</p>
+              <div style="border-top:1px dashed #cfbda2;padding-top:8px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+                <span id="preview-quest-days" style="font-size:0.74rem;color:#7c5f46;">时限：剩余 3 天</span>
+                <span id="preview-quest-bounty" style="font-family:var(--font-sans);font-weight:700;color:#a46f14;">赏金 35 银币</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

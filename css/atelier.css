@@ -1107,6 +1107,16 @@ body {
   text-align: right;
 }
 
+select.input-wood {
+  text-align: left;
+  cursor: pointer;
+}
+
+textarea.input-wood {
+  text-align: left;
+  resize: vertical;
+}
+
 .input-wood:focus {
   outline: none;
   border-color: var(--accent-gold);
