@@ -2074,25 +2074,38 @@
   // 十、创作者工坊 / 编辑器模式引擎 (Atelier Studio Editor Engine)
   // ==========================================================================
   function initEditorStudioView() {
-    // 1. 子选项卡切换 (物品 / 配方 / 委托)
+    // 1. 子选项卡切换 (物品 / 配方 / 委托 / 角色 / 剧情)
     const tabItem = document.getElementById('editor-tab-item');
     const tabRecipe = document.getElementById('editor-tab-recipe');
     const tabQuest = document.getElementById('editor-tab-quest');
+    const tabChar = document.getElementById('editor-tab-char');
+    const tabStory = document.getElementById('editor-tab-story');
+
     const panelItem = document.getElementById('editor-panel-item');
     const panelRecipe = document.getElementById('editor-panel-recipe');
     const panelQuest = document.getElementById('editor-panel-quest');
+    const panelChar = document.getElementById('editor-panel-char');
+    const panelStory = document.getElementById('editor-panel-story');
 
-    const switchEditorTab = (tab, panel) => {
-      [tabItem, tabRecipe, tabQuest].forEach(t => t.classList.remove('active'));
-      [panelItem, panelRecipe, panelQuest].forEach(p => p.style.display = 'none');
-      tab.classList.add('active');
-      panel.style.display = 'block';
+    const allTabs = [tabItem, tabRecipe, tabQuest, tabChar, tabStory].filter(Boolean);
+    const allPanels = [panelItem, panelRecipe, panelQuest, panelChar, panelStory].filter(Boolean);
+
+    const switchEditorTab = (activeTab, activePanel) => {
+      allTabs.forEach(t => t.classList.remove('active'));
+      allPanels.forEach(p => p.style.display = 'none');
+      activeTab.classList.add('active');
+      activePanel.style.display = 'block';
       AudioEngine.playTap();
     };
 
-    if (tabItem) tabItem.addEventListener('click', () => switchEditorTab(tabItem, panelItem));
-    if (tabRecipe) tabRecipe.addEventListener('click', () => switchEditorTab(tabRecipe, panelRecipe));
-    if (tabQuest) tabQuest.addEventListener('click', () => switchEditorTab(tabQuest, panelQuest));
+    if (tabItem && panelItem) tabItem.addEventListener('click', () => switchEditorTab(tabItem, panelItem));
+    if (tabRecipe && panelRecipe) tabRecipe.addEventListener('click', () => switchEditorTab(tabRecipe, panelRecipe));
+    if (tabQuest && panelQuest) tabQuest.addEventListener('click', () => switchEditorTab(tabQuest, panelQuest));
+    if (tabChar && panelChar) tabChar.addEventListener('click', () => {
+      renderCharacterToggleManager();
+      switchEditorTab(tabChar, panelChar);
+    });
+    if (tabStory && panelStory) tabStory.addEventListener('click', () => switchEditorTab(tabStory, panelStory));
 
     // 2. 物品编辑器即时预览与保存
     const nameInput = document.getElementById('edit-item-name');
@@ -2236,28 +2249,137 @@
       });
     }
 
-    // 5. DLC 模组导入导出
+    // 4. 角色自定义创建与选开管理
+    function renderCharacterToggleManager() {
+      const toggleList = document.getElementById('character-toggle-manager-list');
+      if (!toggleList) return;
+      toggleList.innerHTML = '';
+
+      window.ATELIER_DATA.characterProfiles.forEach(char => {
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:#1e150f;padding:6px 10px;border-radius:4px;border:1px solid rgba(198,156,88,0.2);';
+        item.innerHTML = `
+          <div>
+            <strong style="color:#ffd875;font-size:0.8rem;">${char.name}</strong>
+            <span style="font-size:0.7rem;color:var(--text-dim);margin-left:4px;">(${char.title.split('·')[0]})</span>
+          </div>
+          <label style="display:flex;align-items:center;gap:4px;font-size:0.74rem;color:#9ae6b4;cursor:pointer;">
+            <input type="checkbox" id="char-toggle-${char.id}" ${char.disabled ? '' : 'checked'}>
+            <span>${char.disabled ? '已屏蔽' : '启用登场'}</span>
+          </label>
+        `;
+        const box = item.querySelector(`#char-toggle-${char.id}`);
+        if (box) {
+          box.addEventListener('change', () => {
+            char.disabled = !box.checked;
+            AudioEngine.playTap();
+            showToast('人物登场状态变更', `【${char.name}】已${char.disabled ? '从登场名单屏蔽' : '重新激活登场'}！`, 'normal');
+            renderCharacterToggleManager();
+          });
+        }
+        toggleList.appendChild(item);
+      });
+    }
+
+    const saveCharBtn = document.getElementById('btn-save-custom-char');
+    if (saveCharBtn) {
+      saveCharBtn.addEventListener('click', () => {
+        const cName = document.getElementById('edit-char-name').value || '异邦旅人';
+        const cTitle = document.getElementById('edit-char-title').value || '漫游学者';
+        const cRace = document.getElementById('edit-char-race').value || '精灵族';
+        const cBio = document.getElementById('edit-char-bio').value || '远道而来的神秘客人。';
+        const cQuote = document.getElementById('edit-char-quote').value || '“掌柜先生，安好。”';
+        const isEnabled = document.getElementById('edit-char-enabled').value === 'true';
+
+        const newChar = {
+          id: `custom_char_${Date.now()}`,
+          name: cName,
+          title: cTitle,
+          race: cRace,
+          avatar: 'adventurer',
+          hearts: 1,
+          maxHearts: 5,
+          bondLevel: '初次相逢',
+          personality: '自由优雅、富有探索欲',
+          bio: cBio,
+          voiceQuote: cQuote,
+          likes: ['星光原石', '清透精油'],
+          dislikes: ['刺鼻辛辣'],
+          disabled: !isEnabled,
+          heartEvents: [
+            { heart: 1, title: '初次进店', desc: '被柜台的古旧微光吸引，留下了珍贵的印象。', unlocked: true }
+          ]
+        };
+
+        window.ATELIER_DATA.characterProfiles.push(newChar);
+        renderCharacterToggleManager();
+        initDrawersAndModals();
+        AudioEngine.playPerfectCombo();
+        showToast('新角色注入成功！', `【${cName}】已正式写入小镇名册，可随时在人物手札查看！`, 'perfect-combo');
+      });
+    }
+
+    // 5. 剧情章节与剧本包保存及试运行
+    const saveStoryBtn = document.getElementById('btn-save-custom-story');
+    const playStoryBtn = document.getElementById('btn-play-story-preview');
+
+    const getCurrentStoryData = () => ({
+      id: `custom_story_${Date.now()}`,
+      title: document.getElementById('edit-story-title').value || '自创章节',
+      character: document.getElementById('edit-story-character').value,
+      condition: document.getElementById('edit-story-condition-val').value,
+      sceneText: document.getElementById('edit-story-scene').value,
+      dialogueText: document.getElementById('edit-story-dialogue').value,
+      choices: [
+        { label: document.getElementById('edit-story-choice-a').value, outcomeText: '你做出了果断的选择，赢得了客人的由衷赞许与丰厚回馈！' },
+        { label: document.getElementById('edit-story-choice-b').value, outcomeText: '谨慎的处理平息了眼前的困境，工坊保留了宝贵的药材底仓。' }
+      ]
+    });
+
+    if (saveStoryBtn) {
+      saveStoryBtn.addEventListener('click', () => {
+        const storyData = getCurrentStoryData();
+        window.ATELIER_DATA.storyChapters.push(storyData);
+        AudioEngine.playPerfectCombo();
+        showToast('剧情剧本已保存！', `【${storyData.title}】已成功注入主线剧情章节包！`, 'perfect-combo');
+      });
+    }
+
+    if (playStoryBtn) {
+      playStoryBtn.addEventListener('click', () => {
+        const storyData = getCurrentStoryData();
+        showLLMSensoryModal(
+          `🎬 剧情演绎：${storyData.title}`,
+          `【场景】：${storyData.sceneText}\n\n【${storyData.character}】：${storyData.dialogueText}`,
+          `👉 分支 A：${storyData.choices[0].label}\n👉 分支 B：${storyData.choices[1].label}`
+        );
+      });
+    }
+
+    // 6. DLC 模组导入导出 (支持包含角色与剧情包)
     const exportModBtn = document.getElementById('btn-export-mod-pack');
     const importModInput = document.getElementById('input-import-mod-pack');
 
     if (exportModBtn) {
       exportModBtn.addEventListener('click', () => {
         const modPack = {
-          modName: '我的工坊扩充DLC',
+          modName: '我的工坊全套扩展DLC',
           exportTime: new Date().toLocaleString(),
           customRecipes: window.ATELIER_DATA.recipes.filter(r => r.id.startsWith('custom_')),
           customQuests: window.ATELIER_DATA.noticeQuests.filter(q => q.id.startsWith('custom_')),
-          customItems: state.inventoryItems.filter(i => i.id.startsWith('custom_'))
+          customItems: state.inventoryItems.filter(i => i.id.startsWith('custom_')),
+          customCharacters: window.ATELIER_DATA.characterProfiles.filter(c => c.id.startsWith('custom_')),
+          customStories: window.ATELIER_DATA.storyChapters.filter(s => s.id.startsWith('custom_'))
         };
         const blob = new Blob([JSON.stringify(modPack, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `工坊物语_创作者DLC模组_${Date.now()}.atelier-mod.json`;
+        a.download = `工坊物语_全功能DLC模组_${Date.now()}.atelier-mod.json`;
         a.click();
         URL.revokeObjectURL(url);
         AudioEngine.playCoin();
-        showToast('DLC 模组包已导出', '已生成独立创作者扩展包文件！', 'perfect-combo');
+        showToast('全套 DLC 模组包已导出', '已生成包含物品、配方、委托、角色与剧情包的独立模组！', 'perfect-combo');
       });
     }
 
@@ -2272,13 +2394,16 @@
             if (mod.customRecipes) window.ATELIER_DATA.recipes.push(...mod.customRecipes);
             if (mod.customQuests) window.ATELIER_DATA.noticeQuests.unshift(...mod.customQuests);
             if (mod.customItems) state.inventoryItems.push(...mod.customItems);
+            if (mod.customCharacters) window.ATELIER_DATA.characterProfiles.push(...mod.customCharacters);
+            if (mod.customStories) window.ATELIER_DATA.storyChapters.push(...mod.customStories);
 
             renderRecipeCardsList();
             initNoticeBoardView();
             renderCauldronMaterialsPicker();
             renderShippingBinView();
+            initDrawersAndModals();
             AudioEngine.playPerfectCombo();
-            showToast('DLC 模组载入成功！', `成功挂载外部创作者扩展模组，所有新内容已实时就绪！`, 'perfect-combo');
+            showToast('DLC 全模组载入成功！', `成功挂载外部创作者扩展模组，所有角色、剧情与新配方已实时就绪！`, 'perfect-combo');
           } catch (err) {
             showToast('模组格式无效', '解析模组 JSON 数据失败！', 'error');
           }

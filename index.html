@@ -832,7 +832,7 @@
         </div>
 
         <!-- 编辑器子模块导航卡 -->
-        <div style="display:flex;gap:8px;margin:14px 0;border-bottom:1px solid rgba(198,156,88,0.2);padding-bottom:10px;">
+        <div style="display:flex;gap:8px;margin:14px 0;border-bottom:1px solid rgba(198,156,88,0.2);padding-bottom:10px;overflow-x:auto;">
           <button class="nav-tab-btn active" id="editor-tab-item" style="padding:6px 12px;font-size:0.82rem;">
             📦 自定义物品与藏品
           </button>
@@ -841,6 +841,12 @@
           </button>
           <button class="nav-tab-btn" id="editor-tab-quest" style="padding:6px 12px;font-size:0.82rem;">
             📋 自定义小镇布告委托
+          </button>
+          <button class="nav-tab-btn" id="editor-tab-char" style="padding:6px 12px;font-size:0.82rem;color:#9ae6b4;">
+            👥 角色自定义与选开
+          </button>
+          <button class="nav-tab-btn" id="editor-tab-story" style="padding:6px 12px;font-size:0.82rem;color:#ffd875;">
+            📖 自定义剧情章节与剧本包
           </button>
         </div>
 
@@ -1006,6 +1012,157 @@
               <div style="border-top:1px dashed #cfbda2;padding-top:8px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
                 <span id="preview-quest-days" style="font-size:0.74rem;color:#7c5f46;">时限：剩余 3 天</span>
                 <span id="preview-quest-bounty" style="font-family:var(--font-sans);font-weight:700;color:#a46f14;">赏金 35 银币</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3.5 角色自定义与选开面板 (Character Editor & Toggle) -->
+        <div id="editor-panel-char" class="editor-subpanel" style="display:none;">
+          <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px;">
+            <!-- 自定义角色创建 -->
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                  <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">角色姓名：</label>
+                  <input type="text" class="input-wood" id="edit-char-name" value="赛琳娜" style="width:100%;text-align:left;font-size:0.88rem;">
+                </div>
+                <div>
+                  <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">头衔/身份：</label>
+                  <input type="text" class="input-wood" id="edit-char-title" value="异国流浪占星学者" style="width:100%;text-align:left;font-size:0.88rem;">
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                  <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">种族与外貌：</label>
+                  <input type="text" class="input-wood" id="edit-char-race" value="月精灵女性 (28岁)" style="width:100%;text-align:left;font-size:0.82rem;">
+                </div>
+                <div>
+                  <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">初始登场开关：</label>
+                  <select class="input-wood" id="edit-char-enabled" style="width:100%;font-size:0.82rem;padding:6px;">
+                    <option value="true" selected>✅ 立即激活登场</option>
+                    <option value="false">⏸️ 暂不启用 (留在备选席)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">角色人物背景：</label>
+                <textarea class="input-wood" id="edit-char-bio" rows="2" style="width:100%;text-align:left;font-size:0.82rem;line-height:1.5;">身披星纹斗篷的异域学者，对古代避风回路与星光矿石抱有狂热的研究兴趣，常在黄昏时分进店探访稀奇旧物。</textarea>
+              </div>
+
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">招牌语音对白：</label>
+                <input type="text" class="input-wood" id="edit-char-quote" value="“掌柜先生，我从你橱窗泛出的幽光里，嗅到了一丝古星盘的味道……”" style="width:100%;text-align:left;font-size:0.82rem;">
+              </div>
+
+              <button class="btn-gold" id="btn-save-custom-char" style="font-size:0.88rem;padding:9px;">
+                + 保存角色并载入小镇人物名册
+              </button>
+            </div>
+
+            <!-- 右侧：现有全角色选开管理列表 -->
+            <div style="background:#17110c;border:1px solid var(--border-gold-dark);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong style="font-size:0.84rem;color:#ffd875;">👥 小镇常驻角色登场开关控制</strong>
+                <span style="font-size:0.7rem;color:var(--text-dim);">自由选开/屏蔽</span>
+              </div>
+              <p style="font-size:0.74rem;color:#c0ab92;line-height:1.5;">
+                勾选或关闭特定角色。关闭后该角色将不再在柜台推门或在布告栏张贴委托：
+              </p>
+              <div id="character-toggle-manager-list" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;">
+                <!-- 由 JS 渲染角色开关 -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. 剧情章节与剧本包编辑器面板 (Story Editor) -->
+        <div id="editor-panel-story" class="editor-subpanel" style="display:none;">
+          <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px;">
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;">
+                <div>
+                  <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">剧情篇章标题：</label>
+                  <input type="text" class="input-wood" id="edit-story-title" value="第二幕支线：老磨坊轴承的异响" style="width:100%;text-align:left;font-size:0.9rem;">
+                </div>
+                <div>
+                  <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">登场关键角色：</label>
+                  <select class="input-wood" id="edit-story-character" style="width:100%;font-size:0.82rem;padding:6px;">
+                    <option value="汉斯大叔 (老铁匠)">汉斯大叔 (老铁匠)</option>
+                    <option value="维斯佩拉 (行会审查官)">维斯佩拉 (行会审查官)</option>
+                    <option value="玛尔塔大娘 (面包房)">玛尔塔大娘 (面包房)</option>
+                    <option value="见习剑士托马">见习剑士托马</option>
+                    <option value="莫里斯 (名门管家)">莫里斯 (名门管家)</option>
+                    <option value="神秘异国学者">神秘异国学者</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">触发条件：</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <select class="input-wood" id="edit-story-condition-type" style="width:100%;font-size:0.8rem;padding:6px;">
+                    <option value="day_reach">天数到达 (Day ≥ X)</option>
+                    <option value="silver_reach">资金积累 (银币 ≥ X)</option>
+                    <option value="quest_complete">完成特定小镇委托</option>
+                    <option value="item_crafted">熬制出特定词缀药剂</option>
+                  </select>
+                  <input type="text" class="input-wood" id="edit-story-condition-val" value="Day >= 5" style="width:100%;text-align:left;font-size:0.82rem;">
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">场景氛围与感官描写：</label>
+                <textarea class="input-wood" id="edit-story-scene" rows="3" style="width:100%;text-align:left;font-size:0.82rem;line-height:1.5;">暴雨初歇的清晨，白水河水磨坊的方向隐约传来刺耳的金属摩擦悲鸣。汉斯大叔满脸煤灰、披着湿透的皮围裙急匆匆推开店门，手里提着一截断裂发热的粗重铁轴。</textarea>
+              </div>
+
+              <div>
+                <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:4px;">角色对白台词：</label>
+                <textarea class="input-wood" id="edit-story-dialogue" rows="2" style="width:100%;text-align:left;font-size:0.82rem;line-height:1.5;">“小掌柜，水磨坊的齿轮轴承咬死了！磨坊停了全镇明天就断面粉！你后院有没有能耐高温又不怕泥沙磨损的【耐磨滑石重油】？”</textarea>
+              </div>
+
+              <!-- 双分支抉择与奖励 -->
+              <div style="background:#17110c;border:1px solid rgba(198,156,88,0.25);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:8px;">
+                <strong style="font-size:0.8rem;color:#ffd875;">分支决策与奖励设计：</strong>
+                <div style="display:flex;gap:6px;">
+                  <input type="text" class="input-wood" id="edit-story-choice-a" value="选项 A: 答应连夜开炉赶制重油 (收益: 35银 + 汉斯好感+1)" style="flex:1;text-align:left;font-size:0.75rem;">
+                </div>
+                <div style="display:flex;gap:6px;">
+                  <input type="text" class="input-wood" id="edit-story-choice-b" value="选项 B: 指点他用草木灰暂缓阻力 (收益: 12银 + 保全药材)" style="flex:1;text-align:left;font-size:0.75rem;">
+                </div>
+              </div>
+
+              <div style="display:flex;gap:8px;">
+                <button class="btn-gold" id="btn-save-custom-story" style="flex:2;font-size:0.88rem;padding:9px;">
+                  + 保存剧本并注入当前剧情线
+                </button>
+                <button class="btn-secondary" id="btn-play-story-preview" style="flex:1;margin:0;font-size:0.82rem;padding:9px;">
+                  🎬 试运行播放剧本
+                </button>
+              </div>
+            </div>
+
+            <!-- 右侧剧本卡即时预览 -->
+            <div style="background:#150f0c;border:1px solid var(--border-gold);border-radius:8px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div>
+                <span style="font-size:0.72rem;color:var(--border-gold-glow);text-transform:uppercase;">剧本章节即时效果</span>
+                <h3 id="preview-story-title" style="color:#ffd875;font-size:1.1rem;margin:6px 0;">第二幕支线：老磨坊轴承的异响</h3>
+                <div style="font-size:0.75rem;color:#a89785;margin-bottom:8px;">
+                  登场：<strong id="preview-story-char" style="color:#fff;">汉斯大叔 (老铁匠)</strong> · 触发：<span id="preview-story-cond" style="color:#9ae6b4;">Day >= 5</span>
+                </div>
+                <div style="background:#1e1610;border-left:3px solid var(--border-gold);padding:8px 12px;border-radius:0 6px 6px 0;font-size:0.78rem;color:#dfd2c0;line-height:1.6;margin-bottom:10px;" id="preview-story-scene">
+                  暴雨初歇的清晨，白水河水磨坊的方向隐约传来刺耳的金属摩擦悲鸣。汉斯大叔满脸煤灰、披着湿透的皮围裙急匆匆推开店门，手里提着一截断裂发热的粗重铁轴。
+                </div>
+                <div style="background:#281e16;border-radius:6px;padding:8px 12px;font-size:0.78rem;color:#ffd875;font-style:italic;" id="preview-story-diag">
+                  “小掌柜，水磨坊的齿轮轴承咬死了！磨坊停了全镇明天就断面粉！你后院有没有能耐高温又不怕泥沙磨损的【耐磨滑石重油】？”
+                </div>
+              </div>
+
+              <div style="border-top:1px dashed rgba(198,156,88,0.3);padding-top:10px;display:flex;justify-content:space-between;font-size:0.74rem;">
+                <span style="color:var(--text-dim);">支持打包进创作者 DLC</span>
+                <span style="color:#ffd875;">分支决策交互型</span>
               </div>
             </div>
           </div>
