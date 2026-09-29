@@ -70,18 +70,22 @@
         </div>
       </div>
 
-      <div class="money-purse" id="player-money-display" title="钱箱现金储备 (1金 = 100银 = 10000铜)">
+      <div class="money-purse" id="player-money-display" title="钱箱现金储备 (1铂 = 100金 = 10000银 = 1000000铜)">
+        <div class="coin-pill coin-plat" style="color:#e0f7fa;">
+          <span class="coin-dot" style="background:radial-gradient(circle, #e0f7fa 0%, #80deea 60%, #0097a7 100%);"></span>
+          <span id="hud-plat">1</span><span style="font-size:0.68rem;">铂</span>
+        </div>
         <div class="coin-pill coin-gold">
           <span class="coin-dot gold"></span>
           <span id="hud-gold">1</span><span style="font-size:0.68rem;">金</span>
         </div>
         <div class="coin-pill coin-silver">
           <span class="coin-dot silver"></span>
-          <span id="hud-silver">48</span><span style="font-size:0.68rem;">银</span>
+          <span id="hud-silver">1</span><span style="font-size:0.68rem;">银</span>
         </div>
         <div class="coin-pill coin-copper">
           <span class="coin-dot copper"></span>
-          <span id="hud-copper">65</span><span style="font-size:0.68rem;">铜</span>
+          <span id="hud-copper">1</span><span style="font-size:0.68rem;">铜</span>
         </div>
       </div>
 
@@ -150,6 +154,10 @@
       <button class="nav-tab-btn" id="nav-btn-encyclopedia-modal">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         <span>24标签图鉴</span>
+      </button>
+      <button class="nav-tab-btn" id="nav-btn-upgrades-modal" style="color:#f6d155;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+        <span>工坊升级(金币)</span>
       </button>
       <button class="nav-tab-btn" id="nav-btn-save-modal">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -1361,6 +1369,29 @@
           <button class="btn-secondary" id="btn-restart-delivery" style="flex:1;margin:0;padding:14px;font-size:0.82rem;">
             重骑出发
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       模态框七：工坊金币设施升级树 (Workshop Upgrades Modal)
+       ========================================================================== -->
+  <div class="drawer-modal-overlay" id="modal-workshop-upgrades">
+    <div class="drawer-window" style="max-width:680px;">
+      <div class="panel-header" style="background:#1b130e;border-bottom:1px solid var(--border-gold);">
+        <h3 style="color:#ffd875;font-size:0.98rem;display:flex;align-items:center;gap:8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+          工坊设施金币升级树 (深度成长中枢)
+        </h3>
+        <button class="drawer-close-btn" data-close-modal="modal-workshop-upgrades">✕</button>
+      </div>
+      <div class="drawer-body-scroll" style="display:flex;flex-direction:column;gap:12px;padding:18px;">
+        <div style="background:#17110c;border:1px solid rgba(198,156,88,0.25);border-radius:8px;padding:10px 14px;font-size:0.78rem;color:#dfd2c0;line-height:1.6;">
+          💰 <strong>掌柜投资法则：</strong>消耗经营积累的银币，为工坊天平、炼金坩埚、快送单车和临街展柜进行永久升级，大幅降低检验风险与暴利加成！
+        </div>
+        <div id="upgrades-tree-list" style="display:flex;flex-direction:column;gap:10px;">
+          <!-- 由 JS 渲染升级项 -->
         </div>
       </div>
     </div>

@@ -4,28 +4,90 @@
  */
 
 window.ATELIER_DATA = {
-  // 1. 玩家初始工坊状态
+  // 1. 玩家初始工坊状态 (严格 1010101 铜 = 1铂 1金 1银 1铜)
   initialState: {
-    day: 3,
+    day: 1,
     season: '丰收之月',
     week: 1,
-    timeOfDay: '午后 (14:30)',
+    timeOfDay: '晨曦 (08:00)',
     coins: {
-      gold: 1,
-      silver: 48,
-      copper: 65
+      plat: 1,   // 1 铂金币 = 100 金币 = 10000 银币 = 1,000,000 铜币
+      gold: 1,   // 1 金币 = 100 银币 = 10,000 铜币
+      silver: 1, // 1 银币 = 100 铜币
+      copper: 1  // 1 铜币
     },
+    // 总计铜币值：1,000,000 + 10,000 + 100 + 1 = 1,010,101 铜币
+    totalCopper: 1010101,
     debt: {
       currentDueSilver: 50,
       totalDebtSilver: 300,
-      daysRemaining: 4,
+      daysRemaining: 7,
       auditor: '维斯佩拉 (行会三级清算执事)'
+    },
+    upgrades: {
+      scale: 1,      // 优质天平 (检定加成)
+      cauldron: 1,   // 恒温坩埚 (初始澄澈加成)
+      bicycle: 1,    // 避震单车 (送货平衡稳定度加成)
+      shelfSlots: 3, // 货架槽位数
+      reputation: 1  // 商会信誉折扣
     },
     pawnCustomerIndex: 0,
     shippingBin: [],
     showcaseItem: null,
     inventory: []
   },
+
+  // 1.5 工坊金币设施升级树配置 (Gold Workshop Upgrades)
+  workshopUpgrades: [
+    {
+      id: 'up_scale',
+      key: 'scale',
+      name: '祖传黄铜调平天平',
+      category: '鉴定辅助',
+      maxLevel: 3,
+      levels: [
+        { level: 1, costSilver: 0, desc: '基础双盘天平，无额外加值。', bonus: 0 },
+        { level: 2, costSilver: 35, desc: '加装精密游码，柜台检验骰值自动 +2。', bonus: 2 },
+        { level: 3, costSilver: 80, desc: '镶嵌微光晶轴，低阶 Lv.1~Lv.2 特性全部免骰直接看破！', bonus: 5 }
+      ]
+    },
+    {
+      id: 'up_cauldron',
+      key: 'cauldron',
+      name: '奥利弗的秘银覆膜坩埚',
+      category: '炼金设备',
+      maxLevel: 3,
+      levels: [
+        { level: 1, costSilver: 0, desc: '老旧粗陶坩埚，药汤受热不均。', bonus: 0 },
+        { level: 2, costSilver: 40, desc: '内衬导热铜网，初始开锅澄澈度最低保底 45 点。', bonus: 10 },
+        { level: 3, costSilver: 95, desc: '秘银导魔回路，Perfect Combo 额外奖励 +15 澄澈度！', bonus: 25 }
+      ]
+    },
+    {
+      id: 'up_bicycle',
+      key: 'bicycle',
+      name: '巡林避震双轮快送单车',
+      category: '配送载具',
+      maxLevel: 3,
+      levels: [
+        { level: 1, costSilver: 0, desc: '二手木轮单车，石板路颠簸猛烈。', bonus: 0 },
+        { level: 2, costSilver: 30, desc: '加装橡胶避震簧，颠簸泼洒减免 30%，送货时限 +3 秒。', bonus: 30 },
+        { level: 3, costSilver: 75, desc: '矮人齿轮变速箱，加速上限提升 50%，完好送达小费额外 +20%！', bonus: 60 }
+      ]
+    },
+    {
+      id: 'up_shelf',
+      key: 'shelfSlots',
+      name: '临街双层橡木玻璃展架',
+      category: '店面扩建',
+      maxLevel: 3,
+      levels: [
+        { level: 1, costSilver: 0, desc: '3 个前厅展售货位。', bonus: 3 },
+        { level: 2, costSilver: 45, desc: '扩充为 4 个展售货位，顾客停留时间 +1。', bonus: 4 },
+        { level: 3, costSilver: 100, desc: '扩充为 5 个展售货位，黄金微笑完美价成交率提升 25%！', bonus: 5 }
+      ]
+    }
+  ],
 
   // 物品等级 (Tier 1 ~ 6) 官方指导价格基准表 (银币)
   tierPriceGuide: {

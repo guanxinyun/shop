@@ -191,13 +191,15 @@
     }, 4000);
   }
 
-  // 辅助函数：更新顶部 HUD (货币/债务/时间)
+  // 辅助函数：更新顶部 HUD (货币/债务/时间) 严格四级进制显示 (1铂 = 100金 = 10000银 = 1000000铜)
   function updateHUD() {
+    const platEl = document.getElementById('hud-plat');
     const goldEl = document.getElementById('hud-gold');
     const silverEl = document.getElementById('hud-silver');
     const copperEl = document.getElementById('hud-copper');
     const debtEl = document.getElementById('hud-debt-days');
 
+    if (platEl) platEl.textContent = state.coins.plat !== undefined ? state.coins.plat : 1;
     if (goldEl) goldEl.textContent = state.coins.gold;
     if (silverEl) silverEl.textContent = state.coins.silver;
     if (copperEl) copperEl.textContent = state.coins.copper;
@@ -293,17 +295,27 @@
     }
     render();
 
-    // 封面解印点击事件
+    // 封面解印点击事件：直接无缝切入经典开局负债正式剧情演出！
     const overlay = document.getElementById('cover-entrance-overlay');
     if (overlay) {
       overlay.addEventListener('click', () => {
         AudioEngine.playOrb();
         overlay.classList.add('unsealed');
         setTimeout(() => {
-          showToast('工坊开门营业', '晨曦微透，老铺柜台的油灯已点亮。', 'normal');
-        }, 600);
+          showOpeningDebtPrologue();
+        }, 700);
       });
     }
+  }
+
+  // 经典开场剧情：行会执事维斯佩拉登门宣读 300 银币负债契约
+  function showOpeningDebtPrologue() {
+    AudioEngine.playTap();
+    showLLMSensoryModal(
+      '【序章：晨雾中的脚步声与 300 银币债务通告】',
+      `晨曦初现，细雨微湿了门前石板。铺子门廊上的黄铜风铃发出清脆的急促脆响。\n半精灵女性维斯佩拉身着笔挺深黑行会制服，推开吱呀作响的木门。她推了推金丝圆眼镜，将一份盖有商人行会红火漆印戳的契据啪地按在老橡木柜台上。`,
+      `“布兰老爹失踪了，但他留下了 300 枚银币的巨额工坊垫资。第一期 50 银币利息将在 7 天后到期。掌柜先生，清点好你的钱箱（当前仅剩 1铂1金1银1铜）。倘若逾期，铺面钥匙行会必将收回！”\n\n（主线任务已激活：7天内筹集 50 银币保全房契！）`
+    );
   }
 
   // ==========================================================================
@@ -1517,12 +1529,17 @@
     const charBtn = document.getElementById('nav-btn-characters-modal');
     const encyBtn = document.getElementById('nav-btn-encyclopedia-modal');
     const saveBtn = document.getElementById('nav-btn-save-modal');
+    const upgradesBtn = document.getElementById('nav-btn-upgrades-modal');
     const closeShopBtn = document.getElementById('nav-btn-close-shop-modal');
     const debtBadge = document.getElementById('hud-debt-badge');
     const moneyDisplay = document.getElementById('player-money-display');
 
     if (charBtn) charBtn.addEventListener('click', () => openModal('modal-characters-dossier'));
     if (encyBtn) encyBtn.addEventListener('click', () => openModal('modal-tag-encyclopedia'));
+    if (upgradesBtn) upgradesBtn.addEventListener('click', () => {
+      renderUpgradesTreeUI();
+      openModal('modal-workshop-upgrades');
+    });
     if (saveBtn) saveBtn.addEventListener('click', () => {
       renderSaveSlotsUI();
       openModal('modal-save-ledger');
@@ -1702,6 +1719,77 @@
         reader.readAsText(file);
       });
     }
+  }
+
+  // ==========================================================================
+  // 工坊金币设施升级树系统 (Workshop Upgrades Engine)
+  // ==========================================================================
+  function renderUpgradesTreeUI() {
+    const container = document.getElementById('upgrades-tree-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    state.upgrades = state.upgrades || { scale: 1, cauldron: 1, bicycle: 1, shelfSlots: 3, reputation: 1 };
+
+    window.ATELIER_DATA.workshopUpgrades.forEach(up => {
+      const currentLvl = state.upgrades[up.key] || 1;
+      const nextLvlConfig = up.levels.find(l => l.level === currentLvl + 1);
+      const currentLvlConfig = up.levels.find(l => l.level === currentLvl) || up.levels[0];
+      const isMax = !nextLvlConfig;
+
+      const card = document.createElement('div');
+      card.style.cssText = 'background:#1a130e;border:1px solid rgba(198,156,88,0.3);border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+
+      card.innerHTML = `
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <strong style="color:#ffd875;font-size:0.92rem;">${up.name}</strong>
+            <span style="font-size:0.72rem;background:rgba(212,175,55,0.15);color:#ffd875;border:1px solid rgba(212,175,55,0.4);padding:1px 6px;border-radius:4px;">
+              Lv.${currentLvl} / ${up.maxLevel} (${up.category})
+            </span>
+          </div>
+          <div style="font-size:0.78rem;color:#dfd2c0;margin-top:4px;">
+            当前成效：${currentLvlConfig.desc}
+          </div>
+          ${!isMax ? `
+            <div style="font-size:0.72rem;color:#9ae6b4;margin-top:2px;">
+              下一阶：${nextLvlConfig.desc} (需 ${nextLvlConfig.costSilver} 银币)
+            </div>
+          ` : '<div style="font-size:0.72rem;color:#d4af37;margin-top:2px;">★ 已升至名匠终极阶位！</div>'}
+        </div>
+        <div>
+          ${!isMax ? `
+            <button class="btn-gold" style="width:auto;padding:6px 14px;font-size:0.78rem;white-space:nowrap;" id="btn-upgrade-${up.id}">
+              升级 (支付 ${nextLvlConfig.costSilver} 银)
+            </button>
+          ` : `
+            <button class="btn-secondary" style="width:auto;padding:6px 12px;font-size:0.74rem;opacity:0.6;margin:0;" disabled>
+              已封顶
+            </button>
+          `}
+        </div>
+      `;
+
+      if (!isMax) {
+        const upBtn = card.querySelector(`#btn-upgrade-${up.id}`);
+        if (upBtn) {
+          upBtn.addEventListener('click', () => {
+            if (state.coins.silver < nextLvlConfig.costSilver) {
+              showToast('银币不足', `钱箱现银不够支付 ${nextLvlConfig.costSilver} 银币升级费用！`, 'error');
+              return;
+            }
+            state.coins.silver -= nextLvlConfig.costSilver;
+            state.upgrades[up.key] = currentLvl + 1;
+            AudioEngine.playCoin();
+            updateHUD();
+            showToast('工坊设施升级成功！', `【${up.name}】已晋升为 Lv.${currentLvl + 1}，工坊实力大涨！`, 'perfect-combo');
+            renderUpgradesTreeUI();
+          });
+        }
+      }
+
+      container.appendChild(card);
+    });
   }
 
   function openModal(id) {
