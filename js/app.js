@@ -191,7 +191,19 @@
     }, 4000);
   }
 
-  // 辅助函数：更新顶部 HUD (货币/债务/时间) 严格四级进制显示 (1铂 = 100金 = 10000银 = 1000000铜)
+  // 辅助函数：根据总铜币自动严格换算为 铂、金、银、铜 (1铂 = 100金 = 10,000银 = 1,000,000铜)
+  function getCoinsFromCopper(totalCopper) {
+    const c = Math.max(0, Math.floor(totalCopper));
+    const plat = Math.floor(c / 1000000);
+    let rem = c % 1000000;
+    const gold = Math.floor(rem / 10000);
+    rem = rem % 10000;
+    const silver = Math.floor(rem / 100);
+    const copper = rem % 100;
+    return { plat, gold, silver, copper };
+  }
+
+  // 辅助函数：更新顶部 HUD (根据总铜币自动计算并显示四级货币，或读取分字段)
   function updateHUD() {
     const platEl = document.getElementById('hud-plat');
     const goldEl = document.getElementById('hud-gold');
@@ -199,10 +211,16 @@
     const copperEl = document.getElementById('hud-copper');
     const debtEl = document.getElementById('hud-debt-days');
 
-    if (platEl) platEl.textContent = state.coins.plat !== undefined ? state.coins.plat : 1;
-    if (goldEl) goldEl.textContent = state.coins.gold;
-    if (silverEl) silverEl.textContent = state.coins.silver;
-    if (copperEl) copperEl.textContent = state.coins.copper;
+    // 若存在 totalCopper 则脚本自动全量计算，保证绝对精准自洽
+    if (state.totalCopper !== undefined) {
+      const parsed = getCoinsFromCopper(state.totalCopper);
+      state.coins = parsed;
+    }
+
+    if (platEl) platEl.textContent = state.coins.plat !== undefined ? state.coins.plat : 0;
+    if (goldEl) goldEl.textContent = state.coins.gold !== undefined ? state.coins.gold : 0;
+    if (silverEl) silverEl.textContent = state.coins.silver !== undefined ? state.coins.silver : 0;
+    if (copperEl) copperEl.textContent = state.coins.copper !== undefined ? state.coins.copper : 0;
     if (debtEl) debtEl.textContent = `审查：剩 ${state.debt.daysRemaining} 天 (需 ${state.debt.currentDueSilver} 银)`;
   }
 
